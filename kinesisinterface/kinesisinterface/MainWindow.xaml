@@ -1,0 +1,16 @@
+﻿<Window x:Class="kinesisinterface.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:kinesisinterface"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="350" Width="750" Loaded="MainWindow_OnLoaded" Closed="MainWindow_OnClosed">
+    <Grid Margin="50,75,50,50">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ContentControl Name="_contentControl" Margin="5" Grid.Row="1"/>
+    </Grid>
+</Window>

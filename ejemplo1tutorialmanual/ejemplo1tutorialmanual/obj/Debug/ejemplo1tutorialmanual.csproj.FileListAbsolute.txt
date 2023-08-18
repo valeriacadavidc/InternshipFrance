@@ -1,0 +1,15 @@
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\ejemplo1tutorialmanual.exe.config
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\ejemplo1tutorialmanual.exe
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\ejemplo1tutorialmanual.pdb
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.DeviceManagerCLI.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.GenericMotorCLI.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\ThorLabs.MotionControl.KCube.DCServoCLI.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.Tools.Common.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.Tools.Logging.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.PrivateInternal.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\bin\Debug\Thorlabs.MotionControl.Tools.WPF.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\obj\Debug\ejemplo1tutorialmanual.csproj.AssemblyReference.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\obj\Debug\ejemplo1tutorialmanual.csproj.CoreCompileInputs.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\obj\Debug\ejemplo1tutorialmanual.csproj.CopyComplete
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\obj\Debug\ejemplo1tutorialmanual.exe
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1tutorialmanual\ejemplo1tutorialmanual\obj\Debug\ejemplo1tutorialmanual.pdb

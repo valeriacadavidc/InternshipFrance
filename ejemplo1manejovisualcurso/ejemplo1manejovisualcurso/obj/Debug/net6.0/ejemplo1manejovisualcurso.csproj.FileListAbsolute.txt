@@ -1,0 +1,14 @@
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\bin\Debug\net6.0\ejemplo1manejovisualcurso.exe
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\bin\Debug\net6.0\ejemplo1manejovisualcurso.deps.json
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\bin\Debug\net6.0\ejemplo1manejovisualcurso.runtimeconfig.json
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\bin\Debug\net6.0\ejemplo1manejovisualcurso.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\bin\Debug\net6.0\ejemplo1manejovisualcurso.pdb
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.AssemblyInfoInputs.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.AssemblyInfo.cs
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.csproj.CoreCompileInputs.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\refint\ejemplo1manejovisualcurso.dll
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.pdb
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ejemplo1manejovisualcurso.genruntimeconfig.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\ejemplo1manejovisualcurso\ejemplo1manejovisualcurso\obj\Debug\net6.0\ref\ejemplo1manejovisualcurso.dll
