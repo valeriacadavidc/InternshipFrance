@@ -1,0 +1,15 @@
+﻿<Window x:Class="intentointerfaz1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Thorlabs Device Control" Height="350" Width="525"
+        Loaded="Window_Loaded">
+    <Grid>
+        <Button Content="Move" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Margin="10" Click="MoveButton_Click"/>
+        <TextBlock x:Name="PositionTextBlock" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="100,10,0,0">
+            <TextBlock.Foreground>
+                <SolidColorBrush Color="DarkBlue"/>
+            </TextBlock.Foreground>
+        </TextBlock>
+    </Grid>
+</Window>
+

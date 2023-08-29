@@ -15,13 +15,11 @@ C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamie
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.KCube.DCServoUI.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.Tools.WPF.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.PrivateInternal.dll
-C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.Tools.Common.dll
-C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.Tools.Logging.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.Tools.WPF.UI.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Xceed.Wpf.Toolkit.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.Joystick.dll
-C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\Thorlabs.MotionControl.GenericMotorCLI.dll
-C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\bin\Debug\ThorLabs.MotionControl.KCube.DCServoCLI.dll
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\obj\Debug\Acercamiento.csproj.CopyComplete
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\obj\Debug\Acercamiento.exe
 C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\obj\Debug\Acercamiento.pdb
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\obj\Debug\DeviceSelectionWindow.baml
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\Acercamiento\Acercamiento\obj\Debug\DeviceSelectionWindow.g.cs
