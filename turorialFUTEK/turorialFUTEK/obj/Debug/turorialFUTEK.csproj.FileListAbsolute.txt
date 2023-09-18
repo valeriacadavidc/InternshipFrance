@@ -1,0 +1,5 @@
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\turorialFUTEK\turorialFUTEK\obj\Debug\turorialFUTEK.csproj.AssemblyReference.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\turorialFUTEK\turorialFUTEK\obj\Debug\USBExample.FormMain.resources
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\turorialFUTEK\turorialFUTEK\obj\Debug\turorialFUTEK.Properties.Resources.resources
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\turorialFUTEK\turorialFUTEK\obj\Debug\turorialFUTEK.csproj.GenerateResource.cache
+C:\Users\valeria.cadavid\Documents\RepositorioCodigos\InternshipFrance\turorialFUTEK\turorialFUTEK\obj\Debug\turorialFUTEK.csproj.CoreCompileInputs.cache
