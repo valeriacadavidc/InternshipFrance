@@ -3,8 +3,10 @@ import time
 import clr
 import System
 import pandas as pd
+import openpyxl
 import datetime
 import concurrent.futures
+import ctypes
 import threading
 
 
@@ -93,31 +95,26 @@ class ThorlabsDevices:
                 print(f"Failed to disconnect the device: {str(e)}")
 
 # Define a function to home a single device
-def home_device(device, initial_position):
+def home_device_and_set_velocity(device, initial_position, velocity):
     """
-    Home a device and move it to an initial position.
-
-    This function homes the specified 'device' and then moves it to the specified 'initial_position'.
-
-    Parameters:
-    - device: The device object to be homed and moved.
-    - initial_position (Decimal): The initial position to which the device should be moved (Decimal).
-
-    Returns:
-    None
-
-    Example:
-    To home 'my_device' and move it to an initial position of Decimal('10.0'):
-    >>> home_device(my_device, Decimal('10.0'))
-    This will home 'my_device' and then move it to the position Decimal('10.0').
+    Documentar
     """
-    print(f"Homing device with serial number {device.DeviceID}")
-    device.Home(60000)  
-    print(f"Device with serial number {device.DeviceID} has completed homing.")
-    print(f'Moving to initial position {initial_position}')
-    device.MoveTo(Decimal(initial_position), 60000) 
+    
+    try:
+            print(f"Homing device with serial number {device.DeviceID}")
+            device.Home(60000)  
+            print(f"Device with serial number {device.DeviceID} has completed homing.")
+            print(f'Moving to initial position {initial_position}')
+            device.MoveTo(Decimal(initial_position), 60000) 
+            device.SetVelocityParams(Decimal(velocity), Decimal(2))
+            velocity_parameters = device.GetVelocityParams()
+            max_velocity = velocity_parameters.MaxVelocity
+            acceleration = velocity_parameters.Acceleration
+            print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
+    except Exception as error:
+        print(error)
 
-def shif_device(device, final_position):
+def shif_device(device, final_position,execution_time):
     """
     Move a device to a specified final position.
 
@@ -135,7 +132,10 @@ def shif_device(device, final_position):
     >>> shift_device(my_device, Decimal('20.0'))
     This will move 'my_device' to the position Decimal('20.0').
     """
-    device.MoveTo(final_position)
+    try:
+        device.MoveTo(Decimal(final_position),100000)
+    except Exception as e:
+        print(e)
 
 def hysteresis(device,initial_position, final_position, cycles):
     """
@@ -160,81 +160,73 @@ def hysteresis(device,initial_position, final_position, cycles):
     for 5 cycles.
     """
     for _ in range(cycles):
-        device.MoveTo(final_position) 
-        device.MoveTo(initial_position)
+        device.MoveTo(Decimal(final_position)) 
+        device.MoveTo(Decimal(initial_position))
+
+def stress_relaxation(device,foward_position, waiting_time, cycles):
+    for _ in range(cycles):
+        device.MoveBy(-foward_position)
+        time.sleep(waiting_time)
 
 
 
-def validate_parameters(case,devices_dictionary,velocity,initial_position,final_position,cycles=None,travel_time=None, waiting_time=None):
+def set_parameters(case,velocity,initial_position,final_position,cycles=None,forward_position=None, waiting_time=None):
     '''
-    Validates parameters and performs necessary operations based on the specified case.
-
-    Parameters:
-    - case (int): The type of case (1 for shift, 2 for hysteresis, 3 for stress relaxation).
-    - devices_dictionary (dict): A dictionary containing device information.
-    - velocity (float): Velocity value to set for devices (maximum 2.4 mm/s).
-    - initial_position (float): Initial position with a correction of +20 mm.
-    - final_position (float): Final position with a correction of -20 mm.
-    - cycles (int, optional): Number of cycles (only applicable for case 2).
-    - travel_time (float, optional): Travel time (only applicable for case 3).
-    - waiting_time (float, optional): Waiting time (only applicable for case 3).
-
-    Returns:
-    - Tuple of values based on the specified case:
-      - Case 1: initial_position, final_position,execution_time
-      - Case 2: (initial_position, final_position, cycles)
-      - Case 3: (forward_position, waiting_time)
-    
-    If there are validation errors, a list of error messages is returned.
+    DOCUMENTACntar 
     
     '''
  
     initial_position=initial_position+20 #Initial position must be
-    final_position=final_position-20
-
-    #Set the velocity to all the devices 
-    try:
-        for device in devices_dictionary.values():
-            device.SetVelocityParams(Decimal(velocity), Decimal(2))
-            velocity_parameters = device.GetVelocityParams()
-            max_velocity = velocity_parameters.MaxVelocity
-            acceleration = velocity_parameters.Acceleration
-            print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
-    except Exception as error:
-        print(error)
-
+    final_position=20-final_position
     if case==1:
         execution_time=(initial_position-final_position)/velocity
-        return Decimal(initial_position),Decimal(final_position),execution_time
+        print(execution_time)
+        return velocity,initial_position,final_position,execution_time
     if case==2:
-        return Decimal(initial_position),Decimal(final_position),cycles
+        execution_time= (initial_position-final_position)*2*cycles/velocity
+        print(execution_time)
+        return velocity,initial_position,final_position,cycles,execution_time
     if case==3:
-        forward_position=Decimal(travel_time*velocity) #The distance to be moved is calculated according to the time to be moved.
-        return forward_position, waiting_time
+        if forward_position*cycles>20:
+            cycles-=1
+        execution_time=(forward_position/velocity+waiting_time)*cycles
+        print(execution_time)
+        return velocity,forward_position, waiting_time,cycles,execution_time
 
 
-def get_position(devices_dictionary, execution_time, sample_frequency):
+def get_position(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
     devices_list=list(devices_dictionary.values())
+    initial_positions=list(map(lambda device: device.Position,devices_list))
     # Create an empty DataFrame within capture_values
-    columns = ['Timestamp'] + list(devices_dictionary.keys())
+    columns = ['timestamp'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
     data = pd.DataFrame(columns=columns)
     sample_interval = 1.0 / sample_frequency
-    acumulated_time=0
-    initial_positions=list(map(lambda device: device.Position,devices_list))
+    acumulated_time=0   
     time_start=datetime.datetime.now()
-    
-    while acumulated_time<time<execution_time+3: 
+    while acumulated_time<execution_time+3: 
         # Execute obtener_posicion_y_hora for each device
-        data.loc[len(data)] = [datetime.datetime.now()]+ list(map(lambda device: device.Position,devices_list))
+        data.loc[data.shape[0]] = [datetime.datetime.now()]+ list(map(lambda device: device.Position,devices_list))
         # Sleep for one second before the next capture
         time.sleep(sample_interval)
         acumulated_time+=sample_interval
-        
-    data["time"]=data['Timestamp']-time_start
-    data["seconds"]= data["time"].hour* 3600 + data["time"].minute * 60 + data["time"].second
-    data["minutes"]=data["seconds"]/ 3600
-    data["hours"]=data["seconds"]/60
-    print(data)
+    
+    data["time"]=data['timestamp']-time_start
+    data["seconds"] = data["time"].dt.total_seconds()
+    data["minutes"] = data["seconds"] / 60
+    data["hours"] = data["seconds"] / 3600
+    data["milliseconds"] = data["time"].dt.total_seconds() * 1000
+    data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=initial_positions-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+    data["time"]=data["time"].apply(lambda x: str(x).split()[2])
+    data=data.sort_index(axis=1, ascending=False)
+    print(data)# Cargar el archivo de Excel existente
+    with pd.ExcelWriter(path, engine='openpyxl') as writer:
+    
+        # Escribir el DataFrame en la hoja seleccionada
+        data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+# Guardar el archivo de Excel
+    writer.save()
+
 
     # Return the DataFrame once capture_values has finished
 
@@ -251,25 +243,30 @@ def main():
         for serial_number in available_devices:
             thorlabs_devices.connect_device(serial_number)
         
-        parameters=[1,0,20] #velocity,initial position, final position
+        parameters=[1,0,10] #velocity,initial position,final position
 
         #CASE 1
-        initial_position,final_position,execution_time=validate_parameters(case=1,devices_dictionary=thorlabs_devices.devices,velocity=parameters[0],initial_position=parameters[0],final_position=parameters[0],cycles=None,travel_time=None, waiting_time=None)
 
+        #Step 1: get the parameters
+        velocity,initial_position,final_position,execution_time=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+
+      
+        #Do the homing and set the velocity
         #Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
-                executor.submit(home_device, device, initial_position)
-
-        #Toma
+                executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        print('valelinda2')
+       
+        #Do the desirable movement
         devices_list=list(thorlabs_devices.devices.values())
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(shif_device, devices_list, [final_position] * len(devices_list))
-            executor.submit(get_position, devices_list, execution_time)
- 
+            executor.submit(get_position, thorlabs_devices.devices, execution_time, sample_frequency=10,path='ensayo1.xlsx', sheet_name='intento1')
+            executor.submit(shif_device, devices_list[0], final_position,execution_time)
 
+        print('valelinda3')
 
         for device in list(thorlabs_devices.devices.values()):
             thorlabs_devices.disconnect_device(device.DeviceID)
