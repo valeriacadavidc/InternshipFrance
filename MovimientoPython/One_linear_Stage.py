@@ -11,6 +11,7 @@ import ctypes
 import threading
 import select
 import timeit
+import numpy as np
 
 
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
@@ -109,7 +110,7 @@ def home_device_and_set_velocity(device, initial_position, velocity):
             print(f"Device with serial number {device.DeviceID} has completed homing.")
             print(f'Moving to initial position {initial_position}')
             device.MoveTo(Decimal(initial_position), 60000) 
-            device.SetVelocityParams(Decimal(velocity), Decimal(2))
+            device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
             velocity_parameters = device.GetVelocityParams()
             max_velocity = velocity_parameters.MaxVelocity
             acceleration = velocity_parameters.Acceleration
@@ -117,7 +118,7 @@ def home_device_and_set_velocity(device, initial_position, velocity):
     except Exception as error:
         print(error)
 
-def shif_device(device, final_position,execution_time):
+def shif_device(device, final_position,waitTimeout):
     """
     Move a device to a specified final position.
 
@@ -136,11 +137,15 @@ def shif_device(device, final_position,execution_time):
     This will move 'my_device' to the position Decimal('20.0').
     """
     try:
-        device.MoveTo(Decimal(final_position),100000)
+        print('inicio')
+        print(device.DeviceID, datetime.datetime.now(),'\n')
+        device.MoveTo(Decimal(final_position),waitTimeout)
+        print('fin')
+        print(device.DeviceID, datetime.datetime.now(),'\n')
     except Exception as e:
         print(e)
 
-def hysteresis(device,initial_position, final_position, cycles):
+def hysteresis(device,initial_position, final_position, cycles,waitTimeout):
     """
     Perform a hysteresis test on a given device.
 
@@ -162,9 +167,16 @@ def hysteresis(device,initial_position, final_position, cycles):
     This will move 'my_device' back and forth between positions 10.0 and 0.0
     for 5 cycles.
     """
-    for _ in range(cycles):
-        device.MoveTo(Decimal(final_position)) 
-        device.MoveTo(Decimal(initial_position))
+    try:
+        for _ in range(cycles):
+            while (device.Status.IsMoving):
+                pass
+            device.MoveTo(Decimal(final_position),waitTimeout)
+            while (device.Status.IsMoving):
+                pass
+            device.MoveTo(Decimal(initial_position),waitTimeout)
+    except Exception as e:
+        print(e)
 
 def stress_relaxation(device,foward_position, waiting_time, cycles):
     for _ in range(cycles):
@@ -183,18 +195,25 @@ def set_parameters(case,velocity,initial_position,final_position,cycles=None,for
     final_position=25-final_position
     if case==1:
         execution_time=(initial_position-final_position)/velocity
-        print(execution_time)
-        return velocity,initial_position,final_position,execution_time
+        waitTimeout=execution_time*1000+2000
+        waitTimeout+=waitTimeout*0.1
+        waitTimeout=System.Convert.ToUInt64(waitTimeout)
+        return velocity,initial_position,final_position,execution_time,waitTimeout
     if case==2:
         execution_time= (initial_position-final_position)*2*cycles/velocity
-        print(execution_time)
-        return velocity,initial_position,final_position,cycles,execution_time
+        waitTimeout=(initial_position-final_position)*1000/velocity+2000
+        waitTimeout+=waitTimeout*0.1
+        waitTimeout=System.Convert.ToUInt64(waitTimeout)#Duration to wait for command to execute
+        return velocity,initial_position,final_position,cycles,execution_time,waitTimeout
     if case==3:
         if forward_position*cycles>20:
             cycles-=1
         execution_time=(forward_position/velocity+waiting_time)*cycles
         print(execution_time)
-        return velocity,forward_position, waiting_time,cycles,execution_time
+        waitTimeout=forward_position/velocity*1000
+        waitTimeout+=waitTimeout*0.1
+        waitTimeout=System.Convert.ToUInt64(waitTimeout)
+        return velocity,forward_position, waiting_time,cycles,execution_time,waitTimeout
 
 def get_position2(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
     'No usar'
@@ -384,8 +403,6 @@ def get_position5(devices_dictionary, execution_time, sample_frequency, path, sh
     except Exception as e:
         print(e)
 
-
-
 def get_position(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
     devices_list=list(devices_dictionary.values())
     initial_positions=list(map(lambda device: device.Position,devices_list))
@@ -440,18 +457,27 @@ def main():
         #CASE 1
 
         #Step 1: get the parameters
-        velocity,initial_position,final_position,execution_time=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        #velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
 
       
         #Do the homing and set the velocity
         #Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Execute home_device in parallel for all devices
-            for device in thorlabs_devices.devices.values():
-                executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-        print('valelinda2')
-       
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     # Execute home_device in parallel for all devices
+        #     for device in thorlabs_devices.devices.values():
+        #         executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        # print('valelinda2')
+
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayo5.xlsx', sheet_name='intento')
+             
+        #         # Start the tasks in futures
+        #     futures = []
+        #     for device in thorlabs_devices.devices.values():
+        #         futures.append(executor.submit(shif_device, device, final_position,execution_time))
+        #     # Wait for all of the tasks to complete
+        #     concurrent.futures.wait([p3] + futures)
         #Do the desirable movement
         # devices_list=list(thorlabs_devices.devices.values())
         # with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -460,15 +486,28 @@ def main():
         #     p3=executor.submit(shif_device, devices_list[0], final_position,execution_time)
         #     concurrent.futures.wait([p1,p2,p3])
 
+        #Case 2
+        velocity,initial_position,final_position,cycles,execution_time,waitTimeout=set_parameters(case=2,velocity=2.4,initial_position=0,final_position=15,cycles=3,forward_position=None, waiting_time=None)
+        print(velocity,initial_position,final_position,cycles,execution_time,waitTimeout)
+        # Create a ThreadPoolExecutor
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayo5.xlsx', sheet_name='intento')
+            # Submit your tasks to the executor
+            futures = [executor.submit(home_device_and_set_velocity, device, initial_position, velocity) for device in thorlabs_devices.devices.values()]
+
+        # Wait for all tasks to complete
+        concurrent.futures.wait(futures)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayohysteresis4.xlsx', sheet_name='intento')
              
                 # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(shif_device, device, final_position,execution_time))
+                futures.append(executor.submit(hysteresis, device, initial_position, final_position, cycles,waitTimeout))
             # Wait for all of the tasks to complete
             concurrent.futures.wait([p3] + futures)
+
+        
             
 
         print('valelinda3')
