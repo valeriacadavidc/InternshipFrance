@@ -12,7 +12,7 @@ import threading
 import select
 import timeit
 import numpy as np
-
+import csv
 
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
@@ -104,9 +104,10 @@ def home_device_and_set_velocity(device, initial_position, velocity):
     Documentar
     """
     
-    try:
+    try:    
             print(f"Homing device with serial number {device.DeviceID}")
             device.Home(60000)  
+            device.SetVelocityParams(Decimal(2), Decimal(1.5))
             print(f"Device with serial number {device.DeviceID} has completed homing.")
             print(f'Moving to initial position {initial_position}')
             device.MoveTo(Decimal(initial_position), 60000) 
@@ -137,11 +138,7 @@ def shif_device(device, final_position,waitTimeout):
     This will move 'my_device' to the position Decimal('20.0').
     """
     try:
-        print('inicio')
-        print(device.DeviceID, datetime.datetime.now(),'\n')
         device.MoveTo(Decimal(final_position),waitTimeout)
-        print('fin')
-        print(device.DeviceID, datetime.datetime.now(),'\n')
     except Exception as e:
         print(e)
 
@@ -214,6 +211,42 @@ def set_parameters(case,velocity,initial_position,final_position,cycles=None,for
         waitTimeout+=waitTimeout*0.1
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,forward_position, waiting_time,cycles,execution_time,waitTimeout
+    
+def get_position(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
+    devices_list=list(devices_dictionary.values())
+    initial_positions=list(map(lambda device: device.Position,devices_list))
+    # Create an empty DataFrame within capture_values
+    columns = ['timestamp'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+    data = pd.DataFrame(columns=columns)
+    sample_interval = 1.0 / sample_frequency
+    acumulated_time=0   
+    time_start=datetime.datetime.now()
+    while acumulated_time<=execution_time: 
+        # Execute obtener_posicion_y_hora for each device
+        current_time = timeit.default_timer()
+        data.loc[data.shape[0]] = [datetime.datetime.now()]+ list(map(lambda device: device.Position,devices_list))
+        line_time=timeit.default_timer()
+        sleep_time=sample_interval-(line_time-current_time)
+        # Sleep for one second before the next capture
+        time.sleep(sleep_time)
+        acumulated_time+=sleep_time
+    
+    data["time"]=data['timestamp']-time_start
+    data["seconds"] = data["time"].dt.total_seconds()
+    data["minutes"] = data["seconds"] / 60
+    data["hours"] = data["seconds"] / 3600
+    data["milliseconds"] = data["time"].dt.total_seconds() * 1000
+    data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=initial_positions-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+    data["time"]=data["time"].apply(lambda x: str(x).split()[2])
+    data=data.sort_index(axis=1, ascending=False)
+    print(1)
+    print('muestras',execution_time/sample_interval, len(data))
+    print(data["seconds"].diff().describe())
+    #print(data)# Cargar el archivo de Excel existente
+    with pd.ExcelWriter(path, engine='openpyxl') as writer:
+    
+        # Escribir el DataFrame en la hoja seleccionada
+        data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 def get_position2(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
     'No usar'
@@ -403,41 +436,194 @@ def get_position5(devices_dictionary, execution_time, sample_frequency, path, sh
     except Exception as e:
         print(e)
 
-def get_position(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
-    devices_list=list(devices_dictionary.values())
-    initial_positions=list(map(lambda device: device.Position,devices_list))
-    # Create an empty DataFrame within capture_values
-    columns = ['timestamp'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
-    data = pd.DataFrame(columns=columns)
-    sample_interval = 1.0 / sample_frequency
-    acumulated_time=0   
-    time_start=datetime.datetime.now()
-    while acumulated_time<=execution_time: 
-        # Execute obtener_posicion_y_hora for each device
-        current_time = timeit.default_timer()
-        data.loc[data.shape[0]] = [datetime.datetime.now()]+ list(map(lambda device: device.Position,devices_list))
-        line_time=timeit.default_timer()
-        sleep_time=sample_interval-(line_time-current_time)
-        # Sleep for one second before the next capture
-        time.sleep(sleep_time)
-        acumulated_time+=sleep_time
-    
-    data["time"]=data['timestamp']-time_start
-    data["seconds"] = data["time"].dt.total_seconds()
-    data["minutes"] = data["seconds"] / 60
-    data["hours"] = data["seconds"] / 3600
-    data["milliseconds"] = data["time"].dt.total_seconds() * 1000
-    data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=initial_positions-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
-    data["time"]=data["time"].apply(lambda x: str(x).split()[2])
-    data=data.sort_index(axis=1, ascending=False)
-    print(1)
-    print('muestras',execution_time/sample_interval, len(data))
-    print(data["seconds"].diff().describe())
-    #print(data)# Cargar el archivo de Excel existente
-    with pd.ExcelWriter(path, engine='openpyxl') as writer:
-    
-        # Escribir el DataFrame en la hoja seleccionada
-        data.to_excel(writer, sheet_name=sheet_name, index=False)
+def get_position6(devices_dictionary, execution_time, sample_frequency, path, sheet_name):
+    #Mejor funcion por ahora 
+    try:
+    # Create a list to collect data
+        data_list = []
+        devices_list = list(devices_dictionary.values())
+        initial_positions = list(map(lambda device: device.Position, devices_list))
+        sample_interval = 1.0 / sample_frequency
+        sleep_time=sample_interval
+        start_time = timeit.default_timer()
+        new_time=start_time.copy()
+        # Mide el tiempo de ejecución
+        tiempo_extra = timeit.timeit(lambda: (timeit.default_timer() - start_time) <= execution_time or len(data_list) < execution_time / sample_interval, number=1000) # Ejecuta la función 1000 veces
+        data_list.append([datetime.datetime.now()] + initial_positions)           
+        while (timeit.default_timer() - start_time) <= execution_time or len(data_list)<execution_time/sample_interval:
+            while timeit.default_timer()<(new_time+(sleep_time-tiempo_extra)):
+                pass                       
+            current_time = timeit.default_timer()
+            new_time=timeit.default_timer()
+            data_list.append([datetime.datetime.now()] + list(map(lambda device: device.Position, devices_list)))
+            line_time = timeit.default_timer()
+            sleep_time = sample_interval - (line_time - current_time)
+        # Create the DataFrame from the collected data
+        columns = ['timestamp'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        data = pd.DataFrame(data_list, columns=columns)
+        # Calculate additional columns
+        data["time"]=data['timestamp']-data_list[0][0]
+        data['timestamp']=data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+        data["seconds"] = data["time"].dt.total_seconds()
+        #data["minutes"] = data["seconds"] / 60
+        #data["hours"] = data["seconds"] / 3600
+        #data["milliseconds"] = data["time"].dt.total_seconds() * 1000
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=initial_positions-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        data["time"]=data["time"].apply(lambda x: str(x).split()[2])
+        data = data.drop("time", axis=1)
+        data = data[['timestamp',"seconds"] + [col for col in data.columns if col not in ['timestamp',"seconds"]]]
+        print(5)
+        print('muestras',execution_time/sample_interval, len(data))
+        print(data["seconds"].diff().describe())
+        data=data.sort_index(axis=1, ascending=False)
+        # Save to Excel
+        with pd.ExcelWriter(path, engine='openpyxl') as writer:
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+    except Exception as e:
+        print(e)
+
+def get_position7(devices_dictionary, execution_time, sample_frequency, path,name, sheet_name='1'):
+    #Mejor funcion por ahora 
+    try:
+    # Create a list to collect data
+        devices_list = list(devices_dictionary.values())
+        sample_interval = 1.0 / sample_frequency
+        start_time = time.perf_counter()
+        # Encabezados de las columnas
+        columnas = ['timestamp','secs'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        # Abre el archivo CSV en modo de escritura
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            # Escribe la primera fila con los encabezados
+            escritor_csv.writerow(columnas)
+            # Ejecuta el bucle para escribir datos en el archivo CSV
+            while (time.perf_counter() - start_time) <= execution_time * 1.1:   
+                data_line = [datetime.datetime.now(),time.perf_counter()] + list(map(lambda device: device.Position, devices_list))
+                escritor_csv.writerow(data_line)
+        # Lee el archivo CSV como un DataFrame de Pandas
+        data = pd.read_csv(f'{path}\{name}.csv')
+        print(data)
+        
+        # Calculate additional columns
+        data['timestamp'] = pd.to_datetime(data['timestamp'])
+        data["time"]=data['timestamp']-data['timestamp'].iloc[0]
+        data['Seconds_counter']=data['secs'] - data['secs'].iloc[0] ##segundos contados con time.perf_counter
+        data["seconds"] = data["time"].dt.total_seconds()
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        data["time"]=data["time"].apply(lambda x: str(x).split()[2])
+        data = data.drop("time", axis=1)
+        data = data[['timestamp',"seconds"] + [col for col in data.columns if col not in ['timestamp',"seconds"]]]
+        print(5)
+        print('muestras',execution_time/sample_interval, len(data))
+        print(data["seconds"].diff().describe())
+        data=data.sort_index(axis=1, ascending=False)
+        diferencia_de_tiempo = data['timestamp'].diff()
+        freq=0.01
+        umbral_tiempo = pd.Timedelta(seconds=freq)
+        data_muestreo=data.copy()
+        data_muestreo=data_muestreo[diferencia_de_tiempo >= umbral_tiempo].reset_index(inplace=True)
+
+        data['timestamp']=data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+        data_muestreo['timestamp']=data_muestreo['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+        # Save to Excel
+
+        with pd.ExcelWriter(f'{path}\{name}.xlsx', engine='openpyxl') as writer:
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+            data_muestreo.to_excel(writer, sheet_name="muestreo_{freq}", index=False)
+        
+    except Exception as e:
+        print(e)
+
+def get_position(devices_dictionary, execution_time, sample_frequency, path,name, sheet_name='1'):
+    #Mejor funcion por ahora 
+    try:
+    # Create a list to collect data
+        devices_list = list(devices_dictionary.values())
+        sample_interval = 1.0 / sample_frequency
+        start_time = time.perf_counter()
+        # Encabezados de las columnas
+        columnas = ['timestamp','secs'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        # Abre el archivo CSV en modo de escritura
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            # Escribe la primera fila con los encabezados
+            escritor_csv.writerow(columnas)
+            # Ejecuta el bucle para escribir datos en el archivo CSV
+            while (time.perf_counter() - start_time) <= execution_time * 1.1:   
+                data_line = [datetime.datetime.now(),time.perf_counter()] + list(map(lambda device: device.Position, devices_list))
+                escritor_csv.writerow(data_line)
+        # Lee el archivo CSV como un DataFrame de Pandas
+        data = pd.read_csv(f'{path}\{name}.csv')
+        print(data)
+        
+        # Calculate additional columns
+        data['timestamp'] = pd.to_datetime(data['timestamp'])
+        data["time"]=data['timestamp']-data['timestamp'].iloc[0]
+        data['Seconds_counter']=data['secs'] - data['secs'].iloc[0] ##segundos contados con time.perf_counter
+        data["seconds"] = data["time"].dt.total_seconds()
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        data["time"]=data["time"].apply(lambda x: str(x).split()[2])
+        data = data.drop("time", axis=1)
+        data = data[['timestamp',"seconds"] + [col for col in data.columns if col not in ['timestamp',"seconds"]]]
+        print(5)
+        print('muestras',execution_time/sample_interval, len(data))
+        print(data["seconds"].diff().describe())
+        data=data.sort_index(axis=1, ascending=False)
+        diferencia_de_tiempo = data['timestamp'].diff()
+        freq=0.01
+        umbral_tiempo = pd.Timedelta(seconds=freq)
+        data_muestreo=data.copy()
+        data_muestreo=data_muestreo[diferencia_de_tiempo >= umbral_tiempo].reset_index(inplace=True)
+
+
+        data['timestamp']=data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+        data_muestreo['timestamp']=data_muestreo['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+        # Save to Excel
+
+        with pd.ExcelWriter(f'{path}\{name}.xlsx', engine='openpyxl') as writer:
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+            data_muestreo.to_excel(writer, sheet_name="muestreo_{freq}", index=False)
+        
+    except Exception as e:
+        print(e)
+
+def get_position8(devices_dictionary, execution_time, sample_frequency,final_position, path,name, sheet_name='1'):
+    #Mejor funcion por ahora 
+    try:
+    # Create a list to collect data
+        devices_list = list(devices_dictionary.values())
+        start_time = time.perf_counter()
+        # Encabezados de las columnas
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        # Abre el archivo CSV en modo de escritura
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            # Escribe la primera fila con los encabezados
+            escritor_csv.writerow(columnas)
+            # Ejecuta el bucle para escribir datos en el archivo CSV
+            while True:   
+                data_line = [time.perf_counter()] + list(map(lambda device: device.Position, devices_list))
+                escritor_csv.writerow(data_line)
+                if (time.perf_counter() - start_time) > execution_time*1.1:
+                    if (all(Decimal(final_position-0.0008)<valor<=Decimal(final_position)  for valor in map(lambda device: device.Position, devices_list))):
+                        break
+
+        # Lee el archivo CSV como un DataFrame de Pandas
+        data = pd.read_csv(f'{path}\{name}.csv')
+        print(data)
+        # Calculate additional columns
+        data['seconds']=data['seconds'] - data['seconds'].iloc[0] ##segundos contados con time.perf_counter
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        print(5)
+        print(data["seconds"].diff().describe())
+        # Save to Excel
+        with pd.ExcelWriter(f'{path}\{name}.xlsx', engine='openpyxl') as writer:
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+    except Exception as e:
+        print(e)
+
 
 def main():
     """The main entry point for the application"""
@@ -453,32 +639,35 @@ def main():
             thorlabs_devices.connect_device(serial_number)
         
         parameters=[1,0,15] #velocity,initial position,final position
+        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento"
 
         #CASE 1
 
         #Step 1: get the parameters
-        #velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
 
       
-        #Do the homing and set the velocity
-        #Perform homing and place the device in the initial position
+        # Do the homing and set the velocity
+        # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     # Execute home_device in parallel for all devices
-        #     for device in thorlabs_devices.devices.values():
-        #         executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-        # print('valelinda2')
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Execute home_device in parallel for all devices
+            for device in thorlabs_devices.devices.values():
+                executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        print('valelinda2')
 
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayo5.xlsx', sheet_name='intento')
-             
-        #         # Start the tasks in futures
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(shif_device, device, final_position,execution_time))
-        #     # Wait for all of the tasks to complete
-        #     concurrent.futures.wait([p3] + futures)
-        #Do the desirable movement
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            p3=executor.submit(get_position8, thorlabs_devices.devices, execution_time, sample_frequency=10,final_position=final_position,path=path,name=f"{parameters[0]}_{parameters[1]}_{parameters[2]}_prueba_aceleracion_45", sheet_name='1')  
+                # Start the tasks in futures
+            futures = []
+            for device in thorlabs_devices.devices.values():
+                futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
+            # Wait for all of the tasks to complete
+            concurrent.futures.wait([p3] + futures)
+
+
+
+        # # Do the desirable movement
         # devices_list=list(thorlabs_devices.devices.values())
         # with concurrent.futures.ThreadPoolExecutor() as executor:
         #     p1=executor.submit(get_position4, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayo4.xlsx', sheet_name='intento')
@@ -487,25 +676,25 @@ def main():
         #     concurrent.futures.wait([p1,p2,p3])
 
         #Case 2
-        velocity,initial_position,final_position,cycles,execution_time,waitTimeout=set_parameters(case=2,velocity=2.4,initial_position=0,final_position=15,cycles=3,forward_position=None, waiting_time=None)
-        print(velocity,initial_position,final_position,cycles,execution_time,waitTimeout)
-        # Create a ThreadPoolExecutor
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit your tasks to the executor
-            futures = [executor.submit(home_device_and_set_velocity, device, initial_position, velocity) for device in thorlabs_devices.devices.values()]
+        # velocity,initial_position,final_position,cycles,execution_time,waitTimeout=set_parameters(case=2,velocity=2.4,initial_position=0,final_position=15,cycles=3,forward_position=None, waiting_time=None)
+        # print(velocity,initial_position,final_position,cycles,execution_time,waitTimeout)
+        # # Create a ThreadPoolExecutor
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     # Submit your tasks to the executor
+        #     futures = [executor.submit(home_device_and_set_velocity, device, initial_position, velocity) for device in thorlabs_devices.devices.values()]
 
-        # Wait for all tasks to complete
-        concurrent.futures.wait(futures)
+        # # Wait for all tasks to complete
+        # concurrent.futures.wait(futures)
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayohysteresis4.xlsx', sheet_name='intento')
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayohysteresis4.xlsx', sheet_name='intento')
              
-                # Start the tasks in futures
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(hysteresis, device, initial_position, final_position, cycles,waitTimeout))
-            # Wait for all of the tasks to complete
-            concurrent.futures.wait([p3] + futures)
+        #         # Start the tasks in futures
+        #     futures = []
+        #     for device in thorlabs_devices.devices.values():
+        #         futures.append(executor.submit(hysteresis, device, initial_position, final_position, cycles,waitTimeout))
+        #     # Wait for all of the tasks to complete
+        #     concurrent.futures.wait([p3] + futures)
 
         
             
