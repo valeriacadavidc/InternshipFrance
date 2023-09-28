@@ -14,6 +14,9 @@ import timeit
 import numpy as np
 import csv
 
+#os.environ['PYDEVD_WARN_EVALUATION_TIMEOUT'] = '10'
+os.environ['PYDEVD_INTERRUPT_THREAD_TIMEOUT'] = '3000'  #
+
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\ThorLabs.MotionControl.KCube.DCServoCLI.dll")
@@ -111,7 +114,7 @@ def home_device_and_set_velocity(device, initial_position, velocity):
             print(f"Device with serial number {device.DeviceID} has completed homing.")
             print(f'Moving to initial position {initial_position}')
             device.MoveTo(Decimal(initial_position), 60000) 
-            device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
+            device.SetVelocityParams(Decimal(velocity), Decimal(3))
             velocity_parameters = device.GetVelocityParams()
             max_velocity = velocity_parameters.MaxVelocity
             acceleration = velocity_parameters.Acceleration
@@ -535,7 +538,7 @@ def get_position7(devices_dictionary, execution_time, sample_frequency, path,nam
     except Exception as e:
         print(e)
 
-def get_position(devices_dictionary, execution_time, sample_frequency, path,name, sheet_name='1'):
+def get_position1(devices_dictionary, execution_time, sample_frequency, path,name, sheet_name='1'):
     #Mejor funcion por ahora 
     try:
     # Create a list to collect data
@@ -589,7 +592,6 @@ def get_position(devices_dictionary, execution_time, sample_frequency, path,name
         print(e)
 
 def get_position8(devices_dictionary, execution_time, sample_frequency,final_position, path,name, sheet_name='1'):
-    #Mejor funcion por ahora 
     try:
     # Create a list to collect data
         devices_list = list(devices_dictionary.values())
@@ -624,16 +626,130 @@ def get_position8(devices_dictionary, execution_time, sample_frequency,final_pos
     except Exception as e:
         print(e)
 
+def get_position(devices_dictionary, execution_time, sample_frequency,final_position, path,name, sheet_name='1'):
+    try:
+        devices_list = list(devices_dictionary.values())
+        start_time = time.perf_counter()
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            escritor_csv.writerow(columnas)
+            while True:   
+                data_line = [time.perf_counter()] + list(map(lambda device: device.Position, devices_list))
+                escritor_csv.writerow(data_line)
+                if (time.perf_counter() - start_time) > execution_time*1.1:
+                    if (all(Decimal(final_position-0.0008)<valor<=Decimal(final_position)  for valor in map(lambda device: device.Position, devices_list))):
+                        break
+        data = pd.read_csv(f'{path}\{name}.csv')
+        print(data)
+        data['seconds']=data['seconds'] - data['seconds'].iloc[0] #time difference 
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        print(data["seconds"].diff().describe())
+        print(data)
+        #data.to_excel(f'{path}\{name}.xlsx')
+        writer = openpyxl.Workbook()
+        data.to_excel(writer, sheet_name=sheet_name, index=False)
+        writer.save(f'{path}\{name}.xlsx')
+
+    except Exception as e:
+        print(e)
+
+def get_table_position2(devices_dictionary, execution_time,final_position, path,name, sheet_name='1'):
+    #Takes 2 of the positions with different methods
+    try:
+        devices_list = list(devices_dictionary.values())
+        start_time = time.perf_counter()
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]+['real_position_D' + elemento for elemento in list(devices_dictionary.keys())]
+        take_data=True
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            escritor_csv.writerow(columnas)
+            while take_data:   
+                data_line = [time.perf_counter()] + list(map(lambda device: device.Position, devices_list))+ list(map(lambda device: device.DevicePosition, devices_list))
+                escritor_csv.writerow(data_line)
+                if (time.perf_counter() - start_time) > execution_time*1.1:
+                    if (all(Decimal(final_position-0.0008)<valor<=Decimal(final_position)  for valor in map(lambda device: device.Position, devices_list))):
+                        take_data=False
+        data = pd.read_csv(f'{path}\{name}.csv')
+        print(data)
+        data['seconds']=data['seconds'] - data['seconds'].iloc[0] #time difference 
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        print(data["seconds"].diff().describe())
+        print(data)
+        with pd.ExcelWriter(f'{path}\{name}.xlsx', engine='openpyxl') as writer:
+        # Escribir el DataFrame en la hoja seleccionada
+            data.to_excel(writer, sheet_name=sheet_name, index=False)
+    except Exception as e:
+        print(e)
+ 
+
+def get_table_position9(devices_dictionary, execution_time,final_position, path,name, sheet_name='1'):
+    # this code has problems saving the data in excel
+    try:
+        data_list = []
+        devices_list = list(devices_dictionary.values())
+        start_time = time.perf_counter()
+        columns = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        take_data=True
+        while take_data:   
+            data_list.append([time.perf_counter()] + list(map(lambda device: device.Position, devices_list)))
+            if (time.perf_counter() - start_time) > execution_time*1.1:
+                if (all(Decimal(final_position-0.0008)<valor<=Decimal(final_position)  for valor in map(lambda device: device.Position, devices_list))):
+                    take_data=False
+
+        data = pd.DataFrame(data_list, columns=columns)
+        data['seconds']=data['seconds'] - data['seconds'].iloc[0] #time difference 
+        data[['relative_position_' + elemento for elemento in list(devices_dictionary.keys())]]=data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]].iloc[0]-data[['real_position_' + elemento for elemento in list(devices_dictionary.keys())]]
+        print(data)
+        print(data["seconds"].diff().describe())
+        
+        data.to_csv(f'{path}\{name}.csv', index=False)
+        # with pd.ExcelWriter('vale.xlsx', engine='openpyxl') as writer:
+        # # Escribir el DataFrame en la hoja seleccionada
+        #     data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    except Exception as e:
+        print(e)
+
+
+def get_table_position(devices_dictionary, execution_time,final_position, path,name, sheet_name='1'):
+    try:
+        devices_list = list(devices_dictionary.values())
+        start_time = time.perf_counter()
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+        take_data=True
+        with open(f'{path}\{name}.csv', mode='w', newline='') as archivo_csv:
+            escritor_csv = csv.writer(archivo_csv)
+            escritor_csv.writerow(columnas)
+            while take_data:   
+                data_line = [time.perf_counter()] + list(map(lambda device: device.Position, devices_list))
+                escritor_csv.writerow(data_line)
+                if (time.perf_counter() - start_time) > execution_time*1.1:
+                    if (all(Decimal(final_position-0.0008)<valor<=Decimal(final_position)  for valor in map(lambda device: device.Position, devices_list))):
+                        take_data=False
+    except Exception as e:
+        print(e)
+
+def read_and_modify_csv_data(path,name):
+    try:
+        data = pd.read_csv(f'{path}\{name}.csv')
+        data['seconds']=data['seconds'] - data['seconds'].iloc[0] #time difference 
+        columns_real=[columna for columna in data.columns if 'real_position_' in columna]
+        columns_relative = [column.replace('real_position_', 'relative_position_') for column in columns_real]
+        data[columns_relative]=data[columns_real].iloc[0]-data[columns_real]
+        with pd.ExcelWriter('vale.xlsx', engine='openpyxl') as writer:
+        # Escribir el DataFrame en la hoja seleccionada
+            data.to_excel(writer, index=False)
+    except Exception as e:
+        print(e)
 
 def main():
     """The main entry point for the application"""
     try:
         DeviceManagerCLI.BuildDeviceList()
         available_devices = DeviceManagerCLI.GetDeviceList()  # List of available devices
-
         # Create an instance of ThorlabsDevices
         thorlabs_devices = ThorlabsDevices()
-
         # Iterate through the list of serial numbers and assign devices
         for serial_number in available_devices:
             thorlabs_devices.connect_device(serial_number)
@@ -655,17 +771,16 @@ def main():
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
         print('valelinda2')
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            p3=executor.submit(get_position8, thorlabs_devices.devices, execution_time, sample_frequency=10,final_position=final_position,path=path,name=f"{parameters[0]}_{parameters[1]}_{parameters[2]}_prueba_aceleracion_45", sheet_name='1')  
+        name=f"{parameters[0]}_{parameters[1]}_{parameters[2]}_solo_csvdata"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            p3=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name, sheet_name='1')  
                 # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
                 futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
             # Wait for all of the tasks to complete
             concurrent.futures.wait([p3] + futures)
-
-
+        read_and_modify_csv_data(path,name)
 
         # # Do the desirable movement
         # devices_list=list(thorlabs_devices.devices.values())
