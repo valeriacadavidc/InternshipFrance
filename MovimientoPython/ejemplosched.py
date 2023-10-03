@@ -1,85 +1,102 @@
-import datetime
-import sched
+from apscheduler.schedulers.background import BackgroundScheduler
+import csv
 import time
+from datetime import datetime, timedelta
+import pandas as pd
 
-# Initialize variables
-sample_interval = 1.0 / 20  # 20 samples per second
-sample_count = 20
-data_list = []
+name = 'valelinda'
+path = '.'  # Replace with your desired path
+duration_seconds = 10  # Specify the duration in seconds
+
+# # Create a list to store the data
+# data_list = []
+
+# def write_timestamp():
+#     """This function writes a timestamp to the data list."""
+#     timestamp = time.perf_counter()
+#     data_list.append([timestamp])
 
 # # Create a scheduler
-# s = sched.scheduler(time.time, time.sleep)
+# scheduler = BackgroundScheduler()
 
-# # Define a function to perform the sampling
-# def sample_data(sc, sample_num):
-#     # Record the start time of the sample
-#     sample_start_time = time.time()
+# # Calculate the time to stop the scheduler
+# current_time = datetime.now()
+# time_end = current_time + timedelta(seconds=duration_seconds)
 
-#     # Perform your data collection here, replace this line with your data collection logic
-#     data = datetime.datetime.now() # Initialize with the current time
+# # Schedule the job to run every 0.001 seconds until time_end
+# scheduler.add_job(write_timestamp, 'interval', seconds=0.001, end_date=time_end)
 
-#     # Append the data to your data list
-#     data_list.append(data)
+# # Start the scheduler
+# scheduler.start()
 
-#     # Calculate the time elapsed for this sample
-#     sample_elapsed_time = time.time() - sample_start_time
+# try:
+#     # Run the scheduler until time_end is reached
+#     while datetime.now() < time_end:
+#         pass
+# except (KeyboardInterrupt, SystemExit):
+#     pass
 
-#     # Calculate the time to sleep until the next sample
-#     sleep_time = sample_interval - sample_elapsed_time
+# # Shut down the scheduler gracefully (optional)
+# scheduler.shutdown()
 
-#     # If sleep_time is negative, continue immediately to the next sample
-#     if sleep_time < 0:
-#         sleep_time = 0
+# # Convert the data list to a DataFrame
+# data = pd.DataFrame(data_list, columns=["seconds"])
 
-#     # Schedule the next sample
-#     if sample_num < sample_count:
-#         s.enter(sleep_time, 1, sample_data, (sc, sample_num + 1))
+# # Calculate the time differences
+# data['seconds'] = data['seconds'] - data['seconds'].iloc[0]
 
-# # Schedule the initial sample
-# s.enter(0, 1, sample_data, (s, 1))
+# # Save the data to a CSV file
+# data.to_csv(f'{name}.csv', index=False)
+# data['seconds'] = data['seconds'].round(2)
+# # Print the data and its statistics
+# print(data)
+# print(data.diff())
+# print(data.diff().describe())
+# print(data)
 
-# # Run the scheduler
-# s.run()
+import time
+import schedule
+import pandas as pd
 
-# time_diff_list = [data_list[i] - data_list[i - 1] for i in range(1, len(data_list))]
-# for i, data in enumerate(time_diff_list):
-#     print(f"Sample {i+1}: {data[0]}")
-# # Display the collected data
-# for i, data in enumerate(data_list):
-#     print(f"Sample {i+1}: {data[0]}")
+data_list = []
 
+def write_timestamp():
+    """This function writes a timestamp to the data list."""
+    timestamp = time.perf_counter()
+    data_list.append([timestamp])
 
-import signal
-import datetime
+# Create a scheduler object.
+scheduler = schedule.Scheduler()
 
-# Define the signal handler function
-def signal_handler(signum, frame):
-    current_time = datetime.datetime.now()
-    time_samples.append(current_time)
+# Schedule the function `write_timestamp()` to run every 0.01 seconds for 10 seconds.
+scheduler.every(0.01).seconds.do(write_timestamp)
 
-# Set the desired frequency (in Hz)
-desired_frequency = 10
-num_samples = 10
+# Start the scheduler.
+scheduler.run_pending()
 
-# Calculate the time interval in seconds for the desired frequency
-time_interval = 1.0 / desired_frequency
+# Wait for 10 seconds.
+start_time = time.perf_counter()
+# while time.perf_counter() - start_time < 10 and len(data_list)<:
+#     scheduler.run_pending()
+while len(data_list)<1000+1:
+    scheduler.run_pending()
+# Stop the scheduler.
+scheduler.clear()
 
-# Initialize a list to store time samples
-time_samples = []
+# Convert the data list to a DataFrame
+data = pd.DataFrame(data_list, columns=["seconds"])
 
-# Register the signal handler for the SIGALRM signal
-signal.signal(signal.SIGALRM, signal_handler)
+# Calculate the time differences
+data['seconds'] = data['seconds'] - data['seconds'].iloc[0]
 
-# Set up a recurring timer to trigger the SIGALRM signal
-signal.setitimer(signal.ITIMER_REAL, time_interval, time_interval)
+# Save the data to a CSV file
+data.to_csv(f'{name}.csv', index=False)
+print(data)
+# Round the seconds column to 2 decimal places
+data['seconds'] = data['seconds'].round(2)
 
-# Wait until the desired number of samples is captured
-while len(time_samples) < num_samples:
-    pass
-
-# Stop the timer
-signal.setitimer(signal.ITIMER_REAL, 0)
-
-# Print the captured time samples
-for sample in time_samples:
-    print(sample)
+# Print the data and its statistics
+print(data)
+print(data.diff())
+print(data.diff().describe())
+print(1)

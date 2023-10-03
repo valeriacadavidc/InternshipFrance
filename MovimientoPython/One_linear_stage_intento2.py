@@ -245,30 +245,55 @@ def main():
 
         # read_and_modify_csv_data(path,name)
 
-        #Codigo repetibilidad
+        #Codigo repetibilidad con cliclo
+
+        # parameters=[1,0,6.25] #velocity,initial position,final position
+        # path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541"
+        # for i in range(20):
+        #     velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        #     # Do the homing and set the velocity
+        #     # Perform homing and place the device in the initial position
+        #     # Initialize tasks in parallel for all the devices
+        #     with concurrent.futures.ThreadPoolExecutor() as executor:
+        #         # Execute home_device in parallel for all devices
+        #         for device in thorlabs_devices.devices.values():
+        #             executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        #     name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_rep_{i}"
+        #     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        #         p1=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name)  
+        #             # Start the tasks in futures
+        #         futures = []
+        #         for device in thorlabs_devices.devices.values():
+        #             futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
+        #         # Wait for all of the tasks to complete
+        #         concurrent.futures.wait([p1] + futures)
+        #     read_and_modify_csv_data(path,name)
+        #     print(f'Fin ciclo {i}')
+
+        #codigo para hacer repetibilidad iniciando bajo las mismas condiciones (reiniciando computador y apagando equipos)
 
         parameters=[1,0,6.25] #velocity,initial position,final position
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541"
-        for i in range(20):
-            velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
-            # Do the homing and set the velocity
-            # Perform homing and place the device in the initial position
-            # Initialize tasks in parallel for all the devices
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                # Execute home_device in parallel for all devices
-                for device in thorlabs_devices.devices.values():
-                    executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-            name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_rep_{i}"
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                p1=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name)  
-                    # Start the tasks in futures
-                futures = []
-                for device in thorlabs_devices.devices.values():
-                    futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
-                # Wait for all of the tasks to complete
-                concurrent.futures.wait([p1] + futures)
-            read_and_modify_csv_data(path,name)
-            print(f'Fin ciclo {i}')
+        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
+        i=19
+        velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        # Do the homing and set the velocity
+        # Perform homing and place the device in the initial position
+        # Initialize tasks in parallel for all the devices
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Execute home_device in parallel for all devices
+            for device in thorlabs_devices.devices.values():
+                executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_rep_{i}"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            p1=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name)  
+                # Start the tasks in futures
+            futures = []
+            for device in thorlabs_devices.devices.values():
+                futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
+            # Wait for all of the tasks to complete
+            concurrent.futures.wait([p1] + futures)
+        read_and_modify_csv_data(path,name)
+        print(f'Fin ciclo {i}')
 
 
 
