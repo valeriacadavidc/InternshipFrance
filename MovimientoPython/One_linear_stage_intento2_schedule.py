@@ -156,13 +156,13 @@ def set_parameters(case,velocity,initial_position,final_position,cycles=None,for
     if case==1:
         execution_time=(initial_position-final_position)/velocity
         waitTimeout=execution_time*1000+2000
-        waitTimeout+=waitTimeout*0.1
+        waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,initial_position,final_position,execution_time,waitTimeout
     if case==2:
         execution_time= (initial_position-final_position)*2*cycles/velocity
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
-        waitTimeout+=waitTimeout*0.1
+        waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)#Duration to wait for command to execute
         return velocity,initial_position,final_position,cycles,execution_time,waitTimeout
     if case==3:
@@ -171,7 +171,7 @@ def set_parameters(case,velocity,initial_position,final_position,cycles=None,for
         execution_time=(forward_position/velocity+waiting_time)*cycles
         print(execution_time)
         waitTimeout=forward_position/velocity*1000
-        waitTimeout+=waitTimeout*0.1
+        waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,forward_position, waiting_time,cycles,execution_time,waitTimeout
     
@@ -198,7 +198,7 @@ def collect_data(devices_dictionary,frequency,execution_time,path,name):
     # Get the list of devices from the dictionary
     devices_list = list(devices_dictionary.values())
     data_list = []
-    num_samples= int(execution_time*frequency*1.2)
+    num_samples= int(execution_time*frequency*1.5)
     sample_time=1/frequency
     def write_timestamp():
         """This function writes a timestamp and device positions to the data list."""
@@ -306,30 +306,40 @@ def main():
 
         #codigo para hacer repetibilidad iniciando bajo las mismas condiciones (reiniciando computador y apagando equipos) con la funcion que usa un scheduler para tomar los datos
 
-        parameters=[1,0,6.25] #velocity,initial position,final position
+        parameters1=[0.01,0,0.25,10] #velocity,initial position,final position, frecuency
+        parameters2=[0.01,0,6.25,50] #velocity,initial position,final position, frecuency
+        parameters3=[0.01,0,12.5,100] #velocity,initial position,final position, frecuency
+        parameters4=[1,0,0.25,50] #velocity,initial position,final position, frecuency
+        parameters5=[1,0,6.25,100] #velocity,initial position,final position, frecuency
+        parameters6=[1,0,12.5,10] #velocity,initial position,final position, frecuency
+        parameters7=[2,0,0.25,100] #velocity,initial position,final position, frecuency
+        parameters8=[2,0,6.25,10] #velocity,initial position,final position, frecuency
+        parameters9=[2,0,12.5,50] #velocity,initial position,final position, frecuency
+
+        parameters=parameters7
+
         #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Prueba_schedule"
-        i=19
+        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Taguchi_funcion_schedule\\7"
+        #for i in range(20): if I want to run
         velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
         # Do the homing and set the velocity
         # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
+        i=3
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-        name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_rep_{i}"
+        name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_freq_{parameters[3]}_rep_{i}"
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,thorlabs_devices.devices,frequency=100,execution_time=execution_time,path=path,name=name)
+            p1=executor.submit(collect_data,thorlabs_devices.devices,frequency=parameters[3],execution_time=execution_time,path=path,name=name)
                 # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
                 futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
             # Wait for all of the tasks to complete
             concurrent.futures.wait([p1] + futures)
-        
         print(f'Fin ciclo {i}')
-
 
 
         print('valelinda3')

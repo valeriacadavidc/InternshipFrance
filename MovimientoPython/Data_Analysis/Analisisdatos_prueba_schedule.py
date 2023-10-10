@@ -5,6 +5,7 @@ import seaborn as sns
 import scipy.stats as stats
 import dask.dataframe as dd
 import scipy.stats as stats
+from sklearn.metrics import mean_squared_error
 import numpy as np
 import pingouin as pg
 import warnings
@@ -59,8 +60,8 @@ def text_format(val,value):
     return 'background-color: %s' % color
 
 # Set the directory path 
-directory = "C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Prueba_schedule"
-
+#directory = "C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Prueba_schedule"
+directory=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Prueba_schedule_ciclofor_inthecode"
 # List all files in the specified directory
 files_in_directory = os.listdir(directory)
 
@@ -168,6 +169,9 @@ df_resultados_muestras_tiempos = pd.DataFrame(data)
 
 # Create an Excel writer to save the results
 writer1 = pd.ExcelWriter(f'{directory}\\results.xlsx', engine='openpyxl')
+icc_positions.to_excel(writer1, sheet_name='datos_icc_posiciones')
+
+icc_times.to_excel(writer1, sheet_name='datos_icc_tiempos')
 
 # Write concatenated data and descriptions to the Excel file
 concatenated_df_vertical.to_excel(writer1, sheet_name='datos_columnas_vertical')
@@ -193,27 +197,39 @@ data = {
     'Desviaciones Estándar': desviaciones,
 }
 
+
 df_resultados_muestras_tiempos = pd.Series(data) #Results just with medias and desviaciones estandar
 df_resultados_muestras_tiempos = df_resultados_muestras_tiempos.rename('Sampling time')
+mi_dataframe_data_sampling = pd.DataFrame({'data_sampling': all_data_sampling_time})
+mi_dataframe_data_sampling=mi_dataframe_data_sampling.describe()
 # Write additional statistics to the Excel file
 df_resultados_muestras_tiempos.to_excel(writer1, sheet_name='datos_columnas_vertical', startcol=concatenated_df_vertical.shape[1] + 3, startrow=len(descriptions_sampling) + 5)
+mi_dataframe_data_sampling.to_excel(writer1, sheet_name='datos_columnas_vertical', startcol=concatenated_df_vertical.shape[1] + 3+3, startrow=len(descriptions_sampling) + 5)
+# Define un tamaño de fuente más grande
+font_size = 14
+
+# Configurar el tamaño de fuente global para todos los gráficos
+plt.rc('font', size=font_size)
+plt.rc('axes', titlesize=font_size)
+plt.rc('axes', labelsize=font_size)
+plt.rc('xtick', labelsize=font_size*0.8)
+plt.rc('ytick', labelsize=font_size*0.8)
 
 # Create a boxplot of the sample time per experiment
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
-plt.ylabel('Sampling time')
+plt.ylabel('Sampling time (s)')
 plt.xlabel('Experiment')
 plt.title('Sampling sime for each experiment')
 plt.savefig(f'{directory}\\sampletime_english.png')
 plt.close()
 
-
 # Create a boxplot of the sample time per experiment spanish version
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
-plt.ylabel('Tiempo de muestreo')
+plt.ylabel('Tiempo de muestreo (s)')
 plt.xlabel('Experimento')
 plt.title('Tiempo de muestreo para cada experimento')
 plt.savefig(f'{directory}\\sampletime_spanish.png')
@@ -224,36 +240,31 @@ plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.histplot(data=concatenated_df_vertical, x='sampling_time', kde=True, palette="mako")  # Adjust the number of bins as needed
 plt.title(f'Histogram of sampling time obtained from all experiments\nMean: {medias:.3f}, SD: {desviaciones:.3f}')
-plt.xlabel('Sampling time')
+plt.xlabel('Sampling time (s)')
 plt.ylabel('Frequency')
 plt.savefig(f'{directory}\\histogram_english.png')
 plt.close()
 
-
-# Create a histogram of the sampling time for all the data, of the 20 experiments, sphanish version
+# Create a histogram of the sampling time for all the data, of the 20 experiments, spanish version
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.histplot(data=concatenated_df_vertical, x='sampling_time', kde=True, palette="mako")  # Adjust the number of bins as needed
 plt.title(f'Histograma del tiempo de muestreo obtenido de todos los experimentos\nPromedio: {medias:.3f}, DE: {desviaciones:.3f}')
-plt.xlabel('Tiempo de muestreo')
+plt.xlabel('Tiempo de muestreo (s)')
 plt.ylabel('Frecuencia')
 plt.savefig(f'{directory}\\histogram_spanish.png')
 plt.close()
-
-
 
 # Create a FacetGrid for histograms for each experiment
 g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect=1.2)
 
 # Create histograms with KDE for 'sampling_time' in each subplot
 g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-plt.title('Histogram of Sampling Time Obtained for Each Experiment')
-
-# Set titles and labels for each subplot
-g.set_titles("Experiment {col_name}")
-g.set_axis_labels("Sampling Time", "Frequency")
-
-# Adjust spacing between subplots
+plt.suptitle('Histogram of Sampling Time Obtained for Each Experiment', fontsize=font_size*1.5)
+plt.subplots_adjust(top=0.85)
+plt.xlabel('Sampling Time (s)')
+plt.ylabel('Frequency')
+g.set_titles("Experiment {col_name}", fontsize=font_size)
 plt.tight_layout()
 plt.savefig(f'{directory}\\histogram_per_experiment_english.png')
 plt.close()
@@ -263,18 +274,14 @@ g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect
 
 # Create histograms with KDE for 'sampling_time' in each subplot
 g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-plt.title('Histogram of Sampling Time Obtained for Each Experiment')
-
-# Set titles and labels for each subplot
-g.set_titles("Experimento {col_name}")
-g.set_axis_labels("Tiempo de muestreo", "Frecuencia")
-
-# Adjust spacing between subplots
+plt.suptitle('Histograma del tiempo de muestreo obtenido para cada experimento', fontsize=font_size*1.5)
+plt.subplots_adjust(top=0.85)
+plt.xlabel('Tiempo de muestreo (s)')
+plt.ylabel('Frecuencia')
+g.set_titles("Experimento {col_name}", fontsize=font_size)
 plt.tight_layout()
 plt.savefig(f'{directory}\\histogram_per_experiment_spanish.png')
 plt.close()
-
-
 # Select columns containing 'real' and 'seconds' in their names
 positions = [columna for columna in concatenated_df.columns if 'real' in columna]
 times = [columna for columna in concatenated_df.columns if 'seconds' in columna]
@@ -284,6 +291,95 @@ df_positions = concatenated_df[positions].copy()
 df_times = concatenated_df[times].copy()
 df_positions_T = df_positions.T
 df_times_T = df_times.T
+
+# Crear una lista de tiempo que aumente con un paso de 1/100 y redondear a 6 cifras significativas
+tiempo_teorico = [round(i/100, 6) for i in range(751)]
+
+# Crear una lista de posición que comience en 25 y alcance 18.75 con velocidad 1 y redondear a 6 cifras significativas
+posicion_teorica = [round(25 - t, 6) if t <= 6.25 else 18.75 for t in tiempo_teorico]
+
+# Crear un DataFrame con las listas de tiempo y posición
+df_teorico = pd.DataFrame({'Tiempo_teorico': tiempo_teorico, 'Posicion_teorico': posicion_teorica})
+
+
+# Número de experimentos (columnas en el DataFrame)
+num_experimentos = df_positions.shape[1]
+# Define a larger font size
+font_size = 14
+
+# Loop through the 20 samples and plot both position and time with different colors
+for i in range(num_experimentos):
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_teorico['Tiempo_teorico'], df_teorico['Posicion_teorico'], label='Teorico', color='#007acc' )
+    plt.plot(df_times.iloc[:,i], df_positions.iloc[:,i], label='Real', color='#e85f04')
+    plt.xlabel('Tiempo (s)', fontsize=font_size)  # Increase font size for the x-axis label
+    plt.ylabel('Posición (mm)', fontsize=font_size)  # Increase font size for the y-axis label
+    plt.title(f'Movimiento real y movimiento teorico obtenido para el experimento numero {i}', fontsize=font_size*1.2)  # Increase font size for the title
+    plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+    plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+    plt.legend(fontsize=font_size)  # Increase font size for the legend
+    plt.grid(True)
+
+    # Save the plot as an image (you can adjust the extension as needed)
+    plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i}_spanish.png')
+    plt.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_teorico['Tiempo_teorico'], df_teorico['Posicion_teorico'], label='Theoretical', color='#007acc')
+    plt.plot(df_times.iloc[:,i], df_positions.iloc[:,i], label='Real', color='#e85f04')
+    plt.xlabel('Time (s)', fontsize=font_size)  # Increase font size for the x-axis label
+    plt.ylabel('Position (mm)', fontsize=font_size)  # Increase font size for the y-axis label
+    plt.title(f'Real motion and theoretical motion obtained for experiment number {i}', fontsize=font_size*1.2)  # Increase font size for the title
+    plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+    plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+    plt.legend(fontsize=font_size)  # Increase font size for the legend
+    plt.grid(True)
+
+    # Save the plot as an image (you can adjust the extension as needed)
+    plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i}_english.png')
+    plt.close()
+
+# Define colors for the lines
+colors = ['#007acc', '#e85f04', '#d62728', '#9467bd', '#8c564b',
+          '#1f77b4', '#ff7f0e', '#2ca02c', '#17becf', '#bcbd22',
+          '#f7b6d2', '#c7c7c7', '#98df8a', '#ff9896', '#ffbb78',
+          '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#dbdb8d']
+
+# Create a larger title, legend, and labels for the final plot
+plt.figure(figsize=(10, 6))
+for i in range(num_experimentos):
+    plt.plot(df_times.iloc[:, i], df_positions.iloc[:, i], label=f'Experimento {i}', color=colors[i])
+
+plt.plot(df_teorico['Tiempo_teorico'], df_teorico['Posicion_teorico'], label='Teorico' )
+plt.xlabel('Tiempo (s)', fontsize=font_size*1.2)  # Increase font size for the x-axis label
+plt.ylabel('Posición (mm)', fontsize=font_size*1.2)  # Increase font size for the y-axis label
+plt.title('Movimiento real y movimiento teórico para todos los experimentos', fontsize=font_size*1.5)  # Increase font size for the title
+plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size*0.8)  # Increase font size for the legend
+plt.grid(True)
+
+# Save the plot as an image (you can adjust the extension as needed)
+plt.savefig(f'{directory}\\Posicionvstiempo_experimento_all_spanish.png', bbox_inches='tight')
+plt.close()
+
+
+# Create a larger title, legend, and labels for the final plot in English
+plt.figure(figsize=(10, 6))
+for i in range(num_experimentos):
+    plt.plot(df_times.iloc[:, i], df_positions.iloc[:, i], label=f'Experiment {i}', color=colors[i])
+
+plt.plot(df_teorico['Tiempo_teorico'], df_teorico['Posicion_teorico'], label='Theoretical' )
+plt.xlabel('Time (s)', fontsize=font_size*1.2)  # Increase font size for the x-axis label
+plt.ylabel('Position (mm)', fontsize=font_size*1.2)  # Increase font size for the y-axis label
+plt.title('Real motion and theoretical motion obtained for all experiments', fontsize=font_size*1.5)  # Increase font size for the title
+plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size*0.8)  # Increase font size for the legend
+plt.grid(True)
+plt.savefig(f'{directory}\\Posicionvstiempo_experimento_all_eglish.png', bbox_inches='tight')
+plt.close()
 
 # Compute descriptive statistics for time data, for each sample, to see the behaviour of each column (751 samples) each one with 20 samples, of the experiments
 tiempos_describe = df_times_T.describe()
@@ -376,15 +472,6 @@ df_positions.to_excel(writer1, sheet_name='datos_posiciones')
 table_df_resultados_muestras_posiciones.to_excel(writer1, sheet_name='datos_posiciones', startcol=df_positions.shape[1] + 2)
 posiciones_describe.T.to_excel(writer1, sheet_name='datos_posiciones', startcol=df_positions.shape[1] + 2 + df_resultados_muestras_posiciones.shape[1] + 2)
 
-from scipy.spatial.distance import euclidean
-from sklearn.metrics import pairwise_distances
-from scipy.cluster import hierarchy
-similarity_matrix = pairwise_distances(df_positions, metric='euclidean')
-sns.heatmap(similarity_matrix, cmap='coolwarm', annot=True, fmt='.2f')
-plt.title('Similarity Heatmap')
-plt.xlabel('Experiment')
-plt.ylabel('Experiment')
-plt.show()
 # Close the Excel writer
 writer1.close()
 
@@ -431,8 +518,8 @@ df1_copy = df1_copy.reset_index(drop=True)
 df2_copy = df2_copy.reset_index(drop=True)
 
 # Ordenar las columnas en orden descendente
-df1_copy = df1_copy[sorted(list(df1_copy.columns), reverse=True)]
-df2_copy = df2_copy[sorted(list(df2_copy.columns), reverse=True)]
+# df1_copy = df1_copy[sorted(list(df1_copy.columns), reverse=True)]
+# df2_copy = df2_copy[sorted(list(df2_copy.columns), reverse=True)]
 print('valelinda')
 
 for i, (col1, col2) in enumerate(zip(df1_copy.columns, df2_copy.columns)):
@@ -483,8 +570,8 @@ for i, (col1, col2) in enumerate(zip(df1_copy.columns, df2_copy.columns)):
         sns.countplot(data=df_graph,x='experiment',color='#A2C0D9',legend=False,ax=axes[1])
         axes[1].set_title(f'Position histogram of sample number {col2}\nMean: {mean_position:.3f}, SD: {std_dev_position:.3f}\n95% Confidence Intervals: Mean ({mean_ci2[0]:.2f}-{mean_ci2[1]:.2f}), Median ({median_ci2[0]:.2f}-{median_ci2[1]:.2f})')
   
-    axes[0].set_xlabel('Time')
-    axes[1].set_xlabel('Position')
+    axes[0].set_xlabel('Time (s)')
+    axes[1].set_xlabel('Position (mm)')
     axes[0].set_ylabel('Frequency')
     axes[1].set_ylabel('Frequency')
 
@@ -531,8 +618,8 @@ for i, (col1, col2) in enumerate(zip(df1_copy.columns, df2_copy.columns)):
 
     
     
-    axes[0].set_xlabel('Time')
-    axes[1].set_xlabel('Position')
+    axes[0].set_xlabel('Time (s)')
+    axes[1].set_xlabel('Position (mm)')
     axes[0].set_ylabel('Frequency')
     axes[1].set_ylabel('Frequency')
 

@@ -760,27 +760,27 @@ def main():
         #CASE 1
 
         #Step 1: get the parameters
-        velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        #velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
 
       
         # Do the homing and set the velocity
         # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Execute home_device in parallel for all devices
-            for device in thorlabs_devices.devices.values():
-                executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-        print('valelinda2')
-        name=f"{parameters[0]}_{parameters[1]}_{parameters[2]}_solo_csvdata"
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p3=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name, sheet_name='1')  
-                # Start the tasks in futures
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
-            # Wait for all of the tasks to complete
-            concurrent.futures.wait([p3] + futures)
-        read_and_modify_csv_data(path,name)
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     # Execute home_device in parallel for all devices
+        #     for device in thorlabs_devices.devices.values():
+        #         executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
+        # print('valelinda2')
+        # name=f"{parameters[0]}_{parameters[1]}_{parameters[2]}_solo_csvdata"
+        # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        #     p3=executor.submit(get_table_position, thorlabs_devices.devices, execution_time,final_position=final_position,path=path,name=name, sheet_name='1')  
+        #         # Start the tasks in futures
+        #     futures = []
+        #     for device in thorlabs_devices.devices.values():
+        #         futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
+        #     # Wait for all of the tasks to complete
+        #     concurrent.futures.wait([p3] + futures)
+        # read_and_modify_csv_data(path,name)
 
         # # Do the desirable movement
         # devices_list=list(thorlabs_devices.devices.values())
@@ -791,25 +791,25 @@ def main():
         #     concurrent.futures.wait([p1,p2,p3])
 
         #Case 2
-        # velocity,initial_position,final_position,cycles,execution_time,waitTimeout=set_parameters(case=2,velocity=2.4,initial_position=0,final_position=15,cycles=3,forward_position=None, waiting_time=None)
-        # print(velocity,initial_position,final_position,cycles,execution_time,waitTimeout)
-        # # Create a ThreadPoolExecutor
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     # Submit your tasks to the executor
-        #     futures = [executor.submit(home_device_and_set_velocity, device, initial_position, velocity) for device in thorlabs_devices.devices.values()]
+        velocity,initial_position,final_position,cycles,execution_time,waitTimeout=set_parameters(case=2,velocity=2.4,initial_position=0,final_position=15,cycles=3,forward_position=None, waiting_time=None)
+        print(velocity,initial_position,final_position,cycles,execution_time,waitTimeout)
+        # Create a ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit your tasks to the executor
+            futures = [executor.submit(home_device_and_set_velocity, device, initial_position, velocity) for device in thorlabs_devices.devices.values()]
 
-        # # Wait for all tasks to complete
-        # concurrent.futures.wait(futures)
+        # Wait for all tasks to complete
+        concurrent.futures.wait(futures)
 
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayohysteresis4.xlsx', sheet_name='intento')
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            p3=executor.submit(get_position5, thorlabs_devices.devices, execution_time, sample_frequency=10,path='Ensayohysteresis4.xlsx', sheet_name='intento')
              
-        #         # Start the tasks in futures
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(hysteresis, device, initial_position, final_position, cycles,waitTimeout))
-        #     # Wait for all of the tasks to complete
-        #     concurrent.futures.wait([p3] + futures)
+                # Start the tasks in futures
+            futures = []
+            for device in thorlabs_devices.devices.values():
+                futures.append(executor.submit(hysteresis, device, initial_position, final_position, cycles,waitTimeout))
+            # Wait for all of the tasks to complete
+            concurrent.futures.wait([p3] + futures)
 
         
             
