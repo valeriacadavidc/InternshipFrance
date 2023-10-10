@@ -198,7 +198,7 @@ def collect_data(devices_dictionary,frequency,execution_time,path,name):
     # Get the list of devices from the dictionary
     devices_list = list(devices_dictionary.values())
     data_list = []
-    num_samples= int(execution_time*frequency*1.5)
+    num_samples= int(execution_time*frequency*1.5)+250
     sample_time=1/frequency
     def write_timestamp():
         """This function writes a timestamp and device positions to the data list."""
