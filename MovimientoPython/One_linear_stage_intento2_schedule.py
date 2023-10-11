@@ -198,7 +198,7 @@ def collect_data(devices_dictionary,frequency,execution_time,path,name):
     # Get the list of devices from the dictionary
     devices_list = list(devices_dictionary.values())
     data_list = []
-    num_samples= int(execution_time*frequency*1.5)+250
+    num_samples= int((execution_time*1.11+4)*frequency)+100 #Use esta formula haciendo una interpolacion entre dos retrasos
     sample_time=1/frequency
     def write_timestamp():
         """This function writes a timestamp and device positions to the data list."""
@@ -225,6 +225,39 @@ def collect_data(devices_dictionary,frequency,execution_time,path,name):
     data[columns_relative]=data[columns_real].iloc[0]-data[columns_real]
     data.to_csv('{path}\{name}_all.csv'.format(path=path,name=name), index=False)
 
+def collect_data1(devices_dictionary,frequency,execution_time,path,name):
+    # Get the list of devices from the dictionary
+    # Get the list of devices from the dictionary
+    devices_list = list(devices_dictionary.values())
+    sample = 0
+    num_samples = int((execution_time * 1.11 + 4) * frequency) + 300
+    sample_time = 1 / frequency
+    columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
+    # Create a CSV file to save the data
+    csv_file_path = f'{path}\\{name}.csv'
+    with open(csv_file_path, mode='w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        # Write the header to the CSV file
+        csv_writer.writerow(columnas)
+        def write_timestamp():
+            """This function writes a timestamp and device positions to the CSV file."""
+            nonlocal sample
+            data_line = [time.perf_counter()] + [device.Position for device in devices_list]
+            sample += 1
+            csv_writer.writerow(data_line)
+        # Create a scheduler object.
+        scheduler = schedule.Scheduler()
+        # Schedule the function `write_timestamp()` to run every 0.01 seconds for the specified duration.
+        scheduler.every(sample_time).seconds.do(write_timestamp)
+        # Start the scheduler.
+        scheduler.run_pending()
+        while sample < num_samples:
+            scheduler.run_pending()
+        # Stop the scheduler.
+        scheduler.clear()
+    data = pd.read_csv(f'{path}\{name}.csv')
+    data['seconds']=data['seconds'] - data['seconds'].iloc[0] 
+    data.to_csv('{path}\{name}_all.csv'.format(path=path,name=name), index=False)
 
 def read_and_modify_csv_data(path,name):
     try:
@@ -319,20 +352,20 @@ def main():
         parameters=parameters7
 
         #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Taguchi_funcion_schedule\\7"
+        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi_funcion_schedule\\8"
         #for i in range(20): if I want to run
         velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
         # Do the homing and set the velocity
         # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        i=3
+        i=9
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
         name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_freq_{parameters[3]}_rep_{i}"
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,thorlabs_devices.devices,frequency=parameters[3],execution_time=execution_time,path=path,name=name)
+            p1=executor.submit(collect_data1,thorlabs_devices.devices,frequency=parameters[3],execution_time=execution_time,path=path,name=name)
                 # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
