@@ -16,6 +16,8 @@ import numpy as np
 import csv
 import schedule
 
+import sched
+
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\ThorLabs.MotionControl.KCube.DCServoCLI.dll")
@@ -145,7 +147,7 @@ def shif_device(device, final_position,waitTimeout):
         print(e)
 
 
-def set_parameters(case,velocity,initial_position,final_position,cycles=None,forward_position=None, waiting_time=None):
+def set_parameters(case,velocity,initial_position,final_position,frequency,cycles=None,forward_position=None, waiting_time=None):
     '''
     DOCUMENTACntar 
     
@@ -155,10 +157,13 @@ def set_parameters(case,velocity,initial_position,final_position,cycles=None,for
     final_position=25-final_position
     if case==1:
         execution_time=(initial_position-final_position)/velocity
+        num_samples = int((execution_time * 1.1 + 16) * frequency)
+        print(num_samples)
+        sample_time = 1 / frequency
         waitTimeout=execution_time*1000+2000
         waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
-        return velocity,initial_position,final_position,execution_time,waitTimeout
+        return velocity,initial_position,final_position,sample_time,num_samples,execution_time,waitTimeout
     if case==2:
         execution_time= (initial_position-final_position)*2*cycles/velocity
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
@@ -226,11 +231,13 @@ def collect_data(devices_dictionary,frequency,execution_time,path,name):
     data.to_csv('{path}\{name}_all.csv'.format(path=path,name=name), index=False)
 
 def collect_data1(devices_dictionary,frequency,execution_time,path,name):
+    #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses schedule.Scheduler()
     # Get the list of devices from the dictionary
     # Get the list of devices from the dictionary
     devices_list = list(devices_dictionary.values())
     sample = 0
-    num_samples = int((execution_time * 1.11 + 4) * frequency) + 300
+    num_samples = int((execution_time * 1.1 + 16) * frequency) + 30
+    print(num_samples)
     sample_time = 1 / frequency
     columnas = ['seconds'] + ['real_position_' + elemento for elemento in list(devices_dictionary.keys())]
     # Create a CSV file to save the data
@@ -258,6 +265,44 @@ def collect_data1(devices_dictionary,frequency,execution_time,path,name):
     data = pd.read_csv(f'{path}\{name}.csv')
     data['seconds']=data['seconds'] - data['seconds'].iloc[0] 
     data.to_csv('{path}\{name}_all.csv'.format(path=path,name=name), index=False)
+
+def collect_data2(devices_dictionary, sample_time, num_samples, path, name):
+    #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses sched
+    try:
+        # Get the list of devices from the dictionary
+        devices_list = list(devices_dictionary.values())
+        sample = 0
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in devices_dictionary.keys()]
+        # Create a CSV file to save the data
+        csv_file_path = f'{path}\\{name}.csv'
+        with open(csv_file_path, mode='w', newline='') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            # Write the header to the CSV file
+            csv_writer.writerow(columnas)
+            def write_timestamp(sc):
+                """This function writes a timestamp and device positions to the CSV file."""
+                nonlocal sample
+                data_line = [time.perf_counter()] + [device.Position for device in devices_list]
+                sample += 1
+                csv_writer.writerow(data_line)
+                if sample < num_samples:
+                    sc.enter(sample_time, 1, write_timestamp, (sc,))
+
+            # Create a scheduler object
+            s = sched.scheduler(time.perf_counter, time.sleep)
+            # Schedule the function `write_timestamp()` to run immediately and then repeatedly every sample_time seconds
+            s.enter(0, 1, write_timestamp, (s,))
+            s.run()
+        print('valelinda')
+        data = pd.read_csv(f'{path}\\{name}.csv')
+        data['seconds'] = data['seconds'] - data['seconds'].iloc[0]
+        data.to_csv(f'{path}\\{name}_all.csv', index=False)
+    except Exception as e:
+        # Handle the exception here, you can print an error message or log it
+        print(f"An exception occurred: {str(e)}")
+        data = pd.read_csv(f'{path}\\{name}.csv')
+        data['seconds'] = data['seconds'] - data['seconds'].iloc[0]
+        data.to_csv(f'{path}\\{name}_all.csv', index=False)
 
 def read_and_modify_csv_data(path,name):
     try:
@@ -347,25 +392,26 @@ def main():
         parameters6=[1,0,12.5,10] #velocity,initial position,final position, frecuency
         parameters7=[2,0,0.25,100] #velocity,initial position,final position, frecuency
         parameters8=[2,0,6.25,10] #velocity,initial position,final position, frecuency
-        parameters9=[2,0,12.5,50] #velocity,initial position,final position, frecuency
+        parameters9=[2,0,12.5,200] #velocity,initial position,final position, frecuency
 
-        parameters=parameters7
+        parameters=parameters9
 
         #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi_funcion_schedule\\8"
+        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi_funcion_schedule\\3"
         #for i in range(20): if I want to run
-        velocity,initial_position,final_position,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],cycles=None,forward_position=None, waiting_time=None)
+        velocity,initial_position,final_position,sample_time,num_samples,execution_time,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],frequency=parameters[3],cycles=None,forward_position=None, waiting_time=None)
         # Do the homing and set the velocity
         # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        i=9
+        i=13
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity)
-        name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_freq_{parameters[3]}_rep_{i}"
+        name=f"v_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_freq_{parameters[3]}_rep_{i}_sched_25minutes"
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data1,thorlabs_devices.devices,frequency=parameters[3],execution_time=execution_time,path=path,name=name)
+            #p1=executor.submit(collect_data1,thorlabs_devices.devices,frequency=parameters[3],execution_time=execution_time,path=path,name=name)
+            p1=executor.submit(collect_data2,thorlabs_devices.devices,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
                 # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
