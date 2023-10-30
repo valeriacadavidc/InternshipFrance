@@ -11,7 +11,7 @@ import pingouin as pg
 import re
 
 directory=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Intentos_precarga"
-filename="histeresis_v_0.25_pi_0_pf_2.5_freq_20_ciclos_10_intento_1_all.csv"
+filename="histeresis_v_0.25_pi_0_pf_2.5_freq_50_ciclos_10_pollrate30ms_all.csv"
 filepath = os.path.join(directory, filename)
 df = pd.read_csv(filepath)
 columnas = [columna for columna in df.columns if 'real' in columna]
@@ -30,7 +30,7 @@ for i in range(len(columnas)):
 
 plt.xlabel('Tiempo (s)', fontsize=font_size*1.2)  # Increase font size for the x-axis label
 plt.ylabel('Posición (mm)', fontsize=font_size*1.2)  # Increase font size for the y-axis label
-plt.title('Movimiento de las etapas lineales motorizadas con la funcion de histeresis', fontsize=font_size*1.5)  # Increase font size for the title
+plt.title('Movimiento de las etapas lineales motorizadas con la funcion de histeresis', fontsize=font_size)  # Increase font size for the title
 plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
 plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
 plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size*0.8)  # Increase font size for the legend
@@ -48,7 +48,7 @@ for i in range(len(columnas)):
     axs[i].tick_params(axis='y', labelsize=font_size * 0.8)  # Ajustar el tamaño de la fuente para los ticks del eje Y
 
 axs[-1].set_xlabel('Tiempo (s)', fontsize=font_size )  # Ajustar el tamaño de la fuente para la etiqueta del eje X
-fig.suptitle('Movimiento de las etapas lineales motorizadas con la función de histéresis', fontsize=font_size * 1.5)  # Añadir un título general
+fig.suptitle('Movimiento de las etapas lineales motorizadas con la función de histéresis', fontsize=font_size )  # Añadir un título general
 plt.subplots_adjust(hspace=0.4)  # Ajustar el espacio entre subplots
 
 # Guardar el gráfico
