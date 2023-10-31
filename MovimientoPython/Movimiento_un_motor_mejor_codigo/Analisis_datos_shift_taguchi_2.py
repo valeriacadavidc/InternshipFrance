@@ -13,8 +13,8 @@ import pingouin as pg
 import re
 from permetrics.regression import RegressionMetric
 
-# import warnings
-# warnings.filterwarnings("ignore")
+import warnings
+warnings.filterwarnings("ignore")
 
 # Function to perform Anderson-Darling test
 def anderson_darling_test(series):
@@ -60,19 +60,19 @@ def text_format(val,value):
 # Set the directory path 
 #directory = "C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Prueba_schedule"
 #directory=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Prueba_schedule_ciclofor_inthecode"
-directory="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\\Taguchi_un_motor_4factores\\1"
+directory="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\\Taguchi_un_motor_4factores\\3"
 
 # List all files in the specified directory
 files_in_directory = os.listdir(directory)
 
 # Filter files to select those ending with 'all.csv' and sort them based on a specific pattern
 selected_files = [file for file in files_in_directory if file.endswith('all.csv')]
-selected_files = sorted(selected_files, key=lambda x: int(x.split('_rep_')[1].split('_all.csv')[0]))
+selected_files = sorted(selected_files, key=lambda x: int(x.split('_exp_')[1].split('_all.csv')[0]))
 
 #From the file name take the settings made for the movement
-velocity = float(re.search(r'v_([\d.]+)', selected_files[0]).group(1)) #velocity
+velocity = float(re.search(r'vel_([\d.]+)', selected_files[0]).group(1)) #velocity
 pf = 25-float(re.search(r'pf_([\d.]+)', selected_files[0]).group(1)) # final position
-frequency = float(re.search(r'freq_(\d+)', selected_files[0]).group(1)) #sample frequency
+frequency = float(re.search(r'samplefreq_(\d+)', selected_files[0]).group(1)) #sample frequency
 sampling_time=1/frequency
 # Initialize lists to store DataFrames and sampling data
 dataframes = []
@@ -88,7 +88,7 @@ for filename in selected_files:
     df = pd.read_csv(filepath)
     
     # Perform column manipulation to save the dataframes to be joined horizontally
-    start_index = filename.find("rep_")
+    start_index = filename.find("exp_")
     end_index = filename.find("_all")
     result = int(filename[start_index + len("rep_"):end_index])
     columna = [columna for columna in df.columns if 'real' in columna]
@@ -241,7 +241,7 @@ sns.set_style("white")
 sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
 plt.ylabel('Sampling time (s)')
 plt.xlabel('Experiment')
-plt.title(f'Sampling sime for each experiment\nExpected sampling time: {sampling_time}')
+plt.title(f'Sampling time for each experiment\nExpected sampling time: {round(sampling_time,4)}')
 plt.savefig(f'{directory}\\sampletime_english.png')
 plt.close()
 
@@ -251,7 +251,7 @@ sns.set_style("white")
 sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
 plt.ylabel('Tiempo de muestreo (s)')
 plt.xlabel('Experimento')
-plt.title(f'Tiempo de muestreo para cada experimento\nTiempo de muestreo esperado: {sampling_time}')
+plt.title(f'Tiempo de muestreo para cada experimento\nTiempo de muestreo esperado: {round(sampling_time,4)}')
 plt.savefig(f'{directory}\\sampletime_spanish.png')
 plt.close()
 
@@ -259,7 +259,7 @@ plt.close()
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.histplot(data=concatenated_df_vertical, x='sampling_time', kde=True, palette="mako")  # Adjust the number of bins as needed
-plt.title(f'Histogram of sampling time obtained from all experiments\nExpected sampling time: {sampling_time}\nMean: {medias:.3f}, SD: {desviaciones:.3f}')
+plt.title(f'Histogram of sampling time obtained from all experiments\nExpected sampling time: {round(sampling_time,4)}\nMean: {medias:.3f}, SD: {desviaciones:.3f}')
 plt.xlabel('Sampling time (s)')
 plt.ylabel('Frequency')
 plt.savefig(f'{directory}\\histogram_english.png')
@@ -269,7 +269,7 @@ plt.close()
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
 sns.histplot(data=concatenated_df_vertical, x='sampling_time', kde=True, palette="mako")  # Adjust the number of bins as needed
-plt.title(f'Histograma del tiempo de muestreo obtenido de todos los experimentos\nTiempo de muestreo esperado: {sampling_time}\nPromedio: {medias:.3f}, DE: {desviaciones:.3f}')
+plt.title(f'Histograma del tiempo de muestreo obtenido de todos los experimentos\nTiempo de muestreo esperado: {round(sampling_time,4)}\nPromedio: {medias:.3f}, DE: {desviaciones:.3f}')
 plt.xlabel('Tiempo de muestreo (s)')
 plt.ylabel('Frecuencia')
 plt.savefig(f'{directory}\\histogram_spanish.png')
@@ -280,7 +280,7 @@ g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect
 
 # Create histograms with KDE for 'sampling_time' in each subplot
 g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-plt.suptitle(f'Histogram of Sampling Time Obtained for Each Experiment\nExpected sampling time: {sampling_time}', fontsize=font_size*1.5)
+plt.suptitle(f'Histogram of Sampling Time Obtained for Each Experiment\nExpected sampling time: {round(sampling_time,4)}', fontsize=font_size*1.5)
 plt.subplots_adjust(top=0.85)
 plt.xlabel('Sampling Time (s)')
 plt.ylabel('Frequency')
@@ -294,7 +294,7 @@ g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect
 
 # Create histograms with KDE for 'sampling_time' in each subplot
 g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-plt.suptitle(f'Histograma del tiempo de muestreo obtenido para cada experimento\nTiempo de muestreo esperado: {sampling_time}', fontsize=font_size*1.5)
+plt.suptitle(f'Histograma del tiempo de muestreo obtenido para cada experimento\nTiempo de muestreo esperado: {round(sampling_time,4)}', fontsize=font_size*1.5)
 plt.subplots_adjust(top=0.85)
 plt.xlabel('Tiempo de muestreo (s)')
 plt.ylabel('Frecuencia')

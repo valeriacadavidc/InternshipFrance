@@ -119,7 +119,7 @@ def home_device_and_set_velocity(device, initial_position, velocity,polling_rate
             print(f"Device with serial number {device.DeviceID} has completed homing.")
             print(f'Moving to initial position {initial_position}')
             device.MoveTo(Decimal(initial_position), 60000) 
-            device.SetVelocityParams(Decimal(velocity), Decimal(4))
+            device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
             velocity_parameters = device.GetVelocityParams()
             max_velocity = velocity_parameters.MaxVelocity
             acceleration = velocity_parameters.Acceleration
@@ -279,15 +279,15 @@ def main():
         parameters7=[0.5,0,0.25,7,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
         parameters8=[0.5,0,6.25,1,125] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
         parameters9=[0.5,0,12.5,4,75] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
-        parameters=parameters9 #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        parameters=parameters3 #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
         #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\\Taguchi_un_motor_4factores\\9"
+        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\\Taguchi_un_motor_4factores\\3"
         #for i in range(20): if I want to run
         velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
         # Do the homing and set the velocity
         # Perform homing and place the device in the initial position
         # Initialize tasks in parallel for all the devices
-        i=50
+        i=5
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
@@ -303,7 +303,6 @@ def main():
             concurrent.futures.wait([p1] + futures)
         print(f'Fin ciclo shif device {i}')
         print('valelinda')
-
         #Caso 2 histeresis
 
         # parameters=[0.1,0,5,300,150,3] #velocity,initial position,final position, polling rate, frecuency, ciclos
