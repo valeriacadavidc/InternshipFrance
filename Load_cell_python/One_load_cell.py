@@ -49,22 +49,23 @@ print(f"Promedio reading: {np.mean(readings)} segundos")
 #Intento streaming
 t=[]
 readings2=[]
+devices[0].PreStreamingOperations()
 for _ in range(1000):
     t1=time.perf_counter()
-    devices[0].PreStreamingOperations()
+    #devices[0].PreStreamingOperations()
     points = devices[0].GetStreamingDataConverted()
     if points:
         a=min([p.ConvertedValue for p in points])
     else:
         a=None
-    devices[0].PostStreamingOperations()
+    #devices[0].PostStreamingOperations()
     t2 = time.perf_counter() - t1
     t.append(t2)
     if a is not None:
         readings2.append(float(a))
     else:
         readings2.append(None)
-
+devices[0].PostStreamingOperations()
 promedio1 = np.mean(t)
 desviacion_estandar1 = np.std(t)
 print('GetStreamingDataConverted()')
