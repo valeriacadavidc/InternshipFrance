@@ -125,7 +125,7 @@ concatenated_df = pd.concat(dataframes, axis=1, ignore_index=False)
 # Concatenate DataFrames vertically (stacked on top of each other)
 concatenated_df_vertical = pd.concat(dataframes_vertical, ignore_index=True)
 
-concatenated_df
+
 # Concatenate DataFrames for sampling horizontally (side by side), sample times only
 sampling_horizontal = pd.concat(sampling, axis=1, ignore_index=False)
 sampling_horizontal = sampling_horizontal.drop([0])
