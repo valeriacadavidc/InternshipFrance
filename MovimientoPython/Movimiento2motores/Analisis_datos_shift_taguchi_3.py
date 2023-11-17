@@ -60,7 +60,7 @@ def text_format(val,value):
 # Set the directory path 
 #directory = "C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Prueba_schedule"
 #directory=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\\Prueba_schedule_ciclofor_inthecode"
-directory="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi3_dos_motores_2factores\\3"
+directory="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi3_dos_motores_2factores\\9"
 
 # List all files in the specified directory
 files_in_directory = os.listdir(directory)
@@ -127,7 +127,8 @@ concatenated_df = pd.concat(dataframes, axis=1, ignore_index=False)
 # Concatenate DataFrames vertically (stacked on top of each other)
 concatenated_df_vertical = pd.concat(dataframes_vertical, ignore_index=True)
 
-concatenated_df
+
+
 # Concatenate DataFrames for sampling horizontally (side by side), sample times only
 sampling_horizontal = pd.concat(sampling, axis=1, ignore_index=False)
 sampling_horizontal = sampling_horizontal.drop([0])
@@ -170,15 +171,6 @@ descriptions_experiments.to_excel(writer1, sheet_name='datos_columnas_vertical',
 all_data_sampling_time = concatenated_df_vertical['sampling_time'].copy()
 medias = np.mean(all_data_sampling_time, axis=0)
 desviaciones = np.std(all_data_sampling_time, axis=0, ddof=1)
-n = all_data_sampling_time.count()  # Number of samples
-errores_tipicos = desviaciones / np.sqrt(n)
-varianzas = np.var(all_data_sampling_time, axis=0, ddof=1)
-margen_de_error = 1.96 * errores_tipicos
-interval_inf = medias - margen_de_error
-interval_sup = medias + margen_de_error
-amplitud = interval_sup - interval_inf
-amplitud_2 = np.power(amplitud, 2)
-muestras = (np.power(1.96, 2) * varianzas) / amplitud_2
 
 # Create a Series to store results
 data = {
@@ -205,26 +197,6 @@ plt.rc('axes', labelsize=font_size)
 plt.rc('xtick', labelsize=font_size*0.8)
 plt.rc('ytick', labelsize=font_size*0.8)
 
-# # Create a boxplot of the sample time per experiment
-# plt.figure(figsize=(10, 6))
-# sns.set_style("white")
-# sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
-# plt.ylabel('Sampling time (s)')
-# plt.xlabel('Experiment')
-# plt.title(f'Sampling time for each experiment\nExpected sampling time: {round(sampling_time,4)}')
-# plt.savefig(f'{directory}\\sampletime_english.png')
-# plt.close()
-
-# # Create a boxplot of the sample time per experiment spanish version
-# plt.figure(figsize=(10, 6))
-# sns.set_style("white")
-# sns.boxplot(x='cycle', y='sampling_time', data=concatenated_df_vertical, color='royalblue')
-# plt.ylabel('Tiempo de muestreo (s)')
-# plt.xlabel('Experimento')
-# plt.title(f'Tiempo de muestreo para cada experimento\nTiempo de muestreo esperado: {round(sampling_time,4)}')
-# plt.savefig(f'{directory}\\sampletime_spanish.png')
-# plt.close()
-
 # Create a histogram of the sampling time for all the data, of the 20 experiments
 plt.figure(figsize=(10, 6))
 sns.set_style("white")
@@ -245,33 +217,6 @@ plt.ylabel('Frecuencia')
 plt.savefig(f'{directory}\\histogram_spanish.png')
 plt.close()
 
-# Create a FacetGrid for histograms for each experiment
-#g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect=1.2)
-
-# Create histograms with KDE for 'sampling_time' in each subplot
-# g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-# plt.suptitle(f'Histogram of Sampling Time Obtained for Each Experiment\nExpected sampling time: {round(sampling_time,4)}', fontsize=font_size*1.5)
-# plt.subplots_adjust(top=0.85)
-# plt.xlabel('Sampling Time (s)')
-# plt.ylabel('Frequency')
-# g.set_titles("Experiment {col_name}", fontsize=font_size)
-# plt.tight_layout()
-# plt.savefig(f'{directory}\\histogram_per_experiment_english.png')
-# plt.close()
-
-# # Create a FacetGrid for histograms for each experiment, spanish version
-# g = sns.FacetGrid(data=concatenated_df_vertical, col='cycle', col_wrap=5, aspect=1.2)
-
-# # Create histograms with KDE for 'sampling_time' in each subplot
-# g.map(sns.histplot, 'sampling_time', kde=True, palette="YlGnBu_r")
-# plt.suptitle(f'Histograma del tiempo de muestreo obtenido para cada experimento\nTiempo de muestreo esperado: {round(sampling_time,4)}', fontsize=font_size*1.5)
-# plt.subplots_adjust(top=0.85)
-# plt.xlabel('Tiempo de muestreo (s)')
-# plt.ylabel('Frecuencia')
-# g.set_titles("Experimento {col_name}", fontsize=font_size)
-# plt.tight_layout()
-# plt.savefig(f'{directory}\\histogram_per_experiment_spanish.png')
-# plt.close()
 # Select columns containing 'real' and 'seconds' in their names
 positions = [columna for columna in concatenated_df.columns if 'real' in columna]
 times = [columna for columna in concatenated_df.columns if 'seconds' in columna]
@@ -288,11 +233,46 @@ tiempo_teorico = [round(i/frequency, 6) for i in range(len(df_positions))]
 # Crear una lista de posición que comience en 25 y alcance 18.75 con velocidad 1 y redondear a 6 cifras significativas
 posicion_teorica = [round(25 - t * velocity, 6) if t * velocity <= (25 - pf) else pf for t in tiempo_teorico]
 
-
-
 # Crear un DataFrame con las listas de tiempo y posición
 df_teorico = pd.DataFrame({'Tiempo_teorico': tiempo_teorico, 'Posicion_teorico': posicion_teorica})
 
+
+#Encontrar los tiempos en los que se alcanza la posicion deseada
+
+position_columns = [col for col in concatenated_df_vertical.columns if col.startswith("real_position_")]
+
+# Create an empty DataFrame to store the results
+result_df = pd.DataFrame(columns=["cycle"])
+
+# Loop through each position column
+for position_column in position_columns:
+    # Create a boolean mask for rows where the column has the value pf
+    mask = (concatenated_df_vertical[position_column] == pf)
+
+    # Use the mask to filter rows and then group by 'cycle' to get the first occurrence in each cycle
+    result = concatenated_df_vertical[mask].groupby("cycle").head(1)
+
+    # Extract 'cycle', 'seconds', and the value from the position column for the result
+    result_data = result[["cycle", "seconds"]]
+    result_data.columns = ["cycle", "seconds_" + position_column]
+
+    # Merge the result_data with the result_df on 'cycle' and 'seconds'
+    result_df = pd.merge(result_df, result_data, on=["cycle"], how="outer")
+
+# Sort the result_df by 'cycle' and 'seconds'
+result_df = result_df.sort_values(by=["cycle"]).reset_index(drop=True)
+
+
+
+# Crear una lista de tiempo que aumente con un paso de 1/100 y redondear a 6 cifras significativas
+
+first_occurrence = df_teorico[df_teorico['Posicion_teorico'] == pf].head(1)['Tiempo_teorico'].values[0]
+result_df['tiempo_teorico'] =[first_occurrence]*len(result_df)
+for position_column in position_columns:
+    result_df['diff_' + position_column] = result_df['seconds_' + position_column] - result_df['tiempo_teorico']
+
+# Display the result_df
+print(result_df)
 
 # Número de experimentos (columnas en el DataFrame)
 num_experimentos = df_positions.shape[1]
@@ -314,24 +294,29 @@ mape_dict_sampling_multioutput = {}
 
 posicion_teorica = np.array(df_teorico['Posicion_teorico'])
 tiempo_teorico = np.array(df_teorico['Tiempo_teorico'],)
+j=0
+k=0
 # Loop through the samples and plot both position and time with different colors
 for i in range(num_experimentos):
-    if i>num_experimentos/2-1:
-        j=i-5
-    else:
-        j=i
+    if i>0 :
+        if i% 2 != 0:
+            k+=1
+        j=i-k
+    
     posicion_teorica_ajustada = np.array([round(25 - t * velocity, 6) if t * velocity <= (25 - pf) else pf for t in df_times.iloc[:,j]])
-    mape_dict_positions_teorica[f'{df_positions.columns[i]}'] = round(mean_absolute_percentage_error(posicion_teorica, np.array(df_positions.iloc[:, j])) * 100, 5)
-    mape_dict_positions_teorica_ajustada[f'{df_positions.columns[i]}'] = round(mean_absolute_percentage_error(posicion_teorica_ajustada, np.array(df_positions.iloc[:, j])) * 100, 5)
+    print(i,df_times.iloc[:,j].name)
+    print(i,df_positions.iloc[:, i].name)
+    mape_dict_positions_teorica[f'{df_positions.columns[i]}'] = round(mean_absolute_percentage_error(posicion_teorica, np.array(df_positions.iloc[:, i])) * 100, 5)
+    mape_dict_positions_teorica_ajustada[f'{df_positions.columns[i]}'] = round(mean_absolute_percentage_error(posicion_teorica_ajustada, np.array(df_positions.iloc[:, i])) * 100, 5)
     
     #Multioutput
     # Compute values for positions
-    mape_dict_positions_teorica_multioutput[f'MAPE_{df_positions.columns[i]}'] = mean_absolute_percentage_error(posicion_teorica.reshape(1, -1), np.array(df_positions.iloc[:, j]).reshape(1, -1), multioutput='raw_values')*100
+    mape_dict_positions_teorica_multioutput[f'MAPE_{df_positions.columns[i]}'] = mean_absolute_percentage_error(posicion_teorica.reshape(1, -1), np.array(df_positions.iloc[:, i]).reshape(1, -1), multioutput='raw_values')*100
 
     # Compute values for adjusted positions
-    mape_dict_positions_teorica_ajustada_multioutput[f'MAPE_{df_positions.columns[i]}'] = mean_absolute_percentage_error(posicion_teorica_ajustada.reshape(1, -1), np.array(df_positions.iloc[:, j]).reshape(1, -1), multioutput='raw_values') *100
+    mape_dict_positions_teorica_ajustada_multioutput[f'MAPE_{df_positions.columns[i]}'] = mean_absolute_percentage_error(posicion_teorica_ajustada.reshape(1, -1), np.array(df_positions.iloc[:, i]).reshape(1, -1), multioutput='raw_values') *100
 
-    if i<num_experimentos/2-1:
+    if i<num_experimentos/2-1:#se divide por dos por que son 2 motores
         mape_dict_tiempos[f'{df_times.columns[i]}'] = round(mean_absolute_percentage_error(tiempo_teorico, np.array(df_times.iloc[:, i])) * 100, 5)
 
         mape_dict_sampling[f'{sampling_horizontal.columns[i]}'] = round(mean_absolute_percentage_error(np.array([sampling_time]*len(sampling_horizontal)), np.array(sampling_horizontal.iloc[:, j])) * 100, 5)
@@ -359,56 +344,56 @@ for i in range(num_experimentos):
         plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
         plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
         plt.legend(fontsize=font_size)  # Increase font size for the legend
-        plt.grid(True)
         # Save the plot as an image (you can adjust the extension as needed)
-        plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_spanish.png')
+        plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_spanish_sin ceros.png')
         plt.close()
         plt.figure(figsize=(10, 6))
         
         plt.plot(df_times.iloc[:,i][non_zero_indices1], df_positions[columns_to_select[0]][non_zero_indices1], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[0]), color='#e85f04')
         plt.plot(df_times.iloc[:,i][non_zero_indices2], df_positions[columns_to_select[1]][non_zero_indices2], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[1]), color='lightgreen',linestyle='dashed')
-        plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Teorico', color='#007acc',linestyle='dashed')
+        plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Theoretical', color='#007acc',linestyle='dashed')
         plt.xlabel('Time (s)', fontsize=font_size)  # Increase font size for the x-axis label
         plt.ylabel('Position (mm)', fontsize=font_size)  # Increase font size for the y-axis label
         plt.title(f'Real motion and theoretical motion obtained for experiment number {i+1}', fontsize=font_size*1.2)  # Increase font size for the title
         plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
         plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
         plt.legend(fontsize=font_size)  # Increase font size for the legend
-        plt.grid(True)
+
+
+        # Save the plot as an image (you can adjust the extension as needed)
+        plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_english_sinceros.png')
+        plt.close()
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[0]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[0]), color='#e85f04')
+        plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[1]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[1]), color='lightgreen',linestyle='dashed')
+        plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Teorico', color='#007acc',linestyle='dashed')
+        plt.xlabel('Tiempo (s)', fontsize=font_size)  # Increase font size for the x-axis label
+        plt.ylabel('Posición (mm)', fontsize=font_size)  # Increase font size for the y-axis label
+        plt.title(f'Movimiento real y movimiento teorico obtenido para el experimento numero {i+1}', fontsize=font_size*1.2)  # Increase font size for the title
+        plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+        plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+        plt.legend(fontsize=font_size)  # Increase font size for the legend
+      
+        # Save the plot as an image (you can adjust the extension as needed)
+        plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_spanish.png')
+        plt.close()
+        plt.figure(figsize=(10, 6))
+        
+        plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[0]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[0]), color='#e85f04')
+        plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[1]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[1]), color='lightgreen',linestyle='dashed')
+        plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Theoretical', color='#007acc',linestyle='dashed')
+        plt.xlabel('Time (s)', fontsize=font_size)  # Increase font size for the x-axis label
+        plt.ylabel('Position (mm)', fontsize=font_size)  # Increase font size for the y-axis label
+        plt.title(f'Real motion and theoretical motion obtained for experiment number {i+1}', fontsize=font_size*1.2)  # Increase font size for the title
+        plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
+        plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
+        plt.legend(fontsize=font_size)  # Increase font size for the legend
+        
 
         # Save the plot as an image (you can adjust the extension as needed)
         plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_english.png')
         plt.close()
-        # plt.figure(figsize=(10, 6))
-        # plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[0]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[0]), color='#e85f04')
-        # plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[1]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[1]), color='lightgreen',linestyle='dashed')
-        # plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Teorico', color='#007acc',linestyle='dashed')
-        # plt.xlabel('Tiempo (s)', fontsize=font_size)  # Increase font size for the x-axis label
-        # plt.ylabel('Posición (mm)', fontsize=font_size)  # Increase font size for the y-axis label
-        # plt.title(f'Movimiento real y movimiento teorico obtenido para el experimento numero {i+1}', fontsize=font_size*1.2)  # Increase font size for the title
-        # plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
-        # plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
-        # plt.legend(fontsize=font_size)  # Increase font size for the legend
-        # plt.grid(True)
-        # # Save the plot as an image (you can adjust the extension as needed)
-        # plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_spanish.png')
-        # plt.close()
-        # plt.figure(figsize=(10, 6))
-        
-        # plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[0]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[0]), color='#e85f04')
-        # plt.plot(df_times.iloc[:,i], df_positions[columns_to_select[1]], label='Device '+re.sub(f'real_position_|_m_{i+1}', '', columns_to_select[1]), color='lightgreen',linestyle='dashed')
-        # plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Teorico', color='#007acc',linestyle='dashed')
-        # plt.xlabel('Time (s)', fontsize=font_size)  # Increase font size for the x-axis label
-        # plt.ylabel('Position (mm)', fontsize=font_size)  # Increase font size for the y-axis label
-        # plt.title(f'Real motion and theoretical motion obtained for experiment number {i+1}', fontsize=font_size*1.2)  # Increase font size for the title
-        # plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
-        # plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
-        # plt.legend(fontsize=font_size)  # Increase font size for the legend
-        # plt.grid(True)
-
-        # # Save the plot as an image (you can adjust the extension as needed)
-        # plt.savefig(f'{directory}\\Posicionvstiempo_experimento_{i+1}_english.png')
-        # plt.close()
 
 
 combined_df_positions = pd.DataFrame({
@@ -416,7 +401,7 @@ combined_df_positions = pd.DataFrame({
 })
 
 combined_df_positions_ajustada = pd.DataFrame({
-    'MAPE_ajustada': mape_dict_positions_teorica_ajustada
+    'MAPE': mape_dict_positions_teorica_ajustada
 })
 
 combined_df_tiempos = pd.DataFrame({
@@ -438,11 +423,15 @@ mape_df_tiempos_multioutput = pd.DataFrame(mape_dict_tiempos_multioutput)
 
 mape_df_sampling_multioutput = pd.DataFrame(mape_dict_sampling_multioutput)
 
-combined_df_positions['SerialNumber'] = list(combined_df_positions.index.str.extract(r'real_position_(\d+)_m_(\d+)')[0])
-describe_total = combined_df_positions['MAPE'].describe()
-combined_df_positions['SerialNumber'] = combined_df_positions['SerialNumber'].astype(int)
-# Describe for groups based on the serial number
-describe_grouped = combined_df_positions.groupby('SerialNumber')['MAPE'].describe()
+combined_df_positions_ajustada['SerialNumber'] = list(combined_df_positions_ajustada.index.str.extract(r'real_position_(\d+)_m_(\d+)')[0])
+combined_df_positions_ajustada['Exp'] = list(combined_df_positions_ajustada.index.str.extract(r'_m_(\d+)')[0])
+combined_df_positions_ajustada['SerialNumber'] = combined_df_positions_ajustada['SerialNumber'].astype(int)
+combined_df_positions_ajustada['Exp'] = combined_df_positions_ajustada['Exp'].astype(int)
+grouped_df_positions_ajustada = combined_df_positions_ajustada.groupby(['Exp', 'SerialNumber']).mean().T
+grouped_df_positions_ajustada_describe_by_motor=combined_df_positions_ajustada.groupby(['SerialNumber'])['MAPE'].describe()[['mean','std']]
+grouped_df_describe_perexperiment_positions_ajust = combined_df_positions_ajustada.groupby('Exp').describe()['MAPE'][['mean','std']]
+describe_means_per_experiment=grouped_df_describe_perexperiment_positions_ajust.describe().loc[['mean', 'std']]
+
 
 
 describe_positions = combined_df_positions.describe()
@@ -463,6 +452,19 @@ data_positions_ajustada = {
 }
 df_resultados_muestras_positions_ajustada = pd.DataFrame(data_positions_ajustada)
 
+normality_data_positions_ajustada_per_device = {
+    'Anderson-Darling Test': combined_df_positions_ajustada.groupby(['SerialNumber'])['MAPE'].apply(anderson_darling_test),
+    'Shapiro-Wilk Test P-Value': combined_df_positions_ajustada.groupby(['SerialNumber'])['MAPE'].apply(shapiro_p_value1)
+}
+df_normality_resultados_muestras_positions_per_device = pd.DataFrame(normality_data_positions_ajustada_per_device)
+
+normality_describe_perexperiment_positions_ajust = {
+    'Anderson-Darling Test': pd.DataFrame(grouped_df_describe_perexperiment_positions_ajust['mean']).apply(anderson_darling_test),
+    'Shapiro-Wilk Test P-Value': pd.DataFrame(grouped_df_describe_perexperiment_positions_ajust['mean']).apply(shapiro_p_value1)
+}
+df_normality_describe_perexperiment_positions_ajust =pd.DataFrame(normality_describe_perexperiment_positions_ajust)
+
+
 data_tiempos = {
     'Anderson-Darling Test': combined_df_tiempos.apply(anderson_darling_test),
     'Shapiro-Wilk Test P-Value': combined_df_tiempos.apply(shapiro_p_value1)
@@ -475,84 +477,54 @@ data_sampling = {
 }
 df_resultados_muestras_sampling = pd.DataFrame(data_sampling)
 
+
+
 # Apply styling
 table_df_resultados_muestras_positions = df_resultados_muestras_positions.style.map(text_format,value='anderson',subset=['Anderson-Darling Test']).map(text_format,value=0.05,subset=['Shapiro-Wilk Test P-Value'])
 table_df_resultados_muestras_positions_ajustada = df_resultados_muestras_positions_ajustada.style.map(text_format,value='anderson',subset=['Anderson-Darling Test']).map(text_format,value=0.05,subset=['Shapiro-Wilk Test P-Value'])
 table_df_resultados_muestras_tiempos = df_resultados_muestras_tiempos.style.map(text_format,value='anderson',subset=['Anderson-Darling Test']).map(text_format,value=0.05,subset=['Shapiro-Wilk Test P-Value'])
 table_df_resultados_muestras_sampling = df_resultados_muestras_sampling.style.map(text_format,value='anderson',subset=['Anderson-Darling Test']).map(text_format,value=0.05,subset=['Shapiro-Wilk Test P-Value'])
 
+#Guardaren excel
+#MAPE por experimento y motor (serial number) [todos los resultados]
+grouped_df_positions_ajustada
+#MAPE promedio por los resultados de cada motor, es decir, si son 3 motores, 3 promedio
+grouped_df_positions_ajustada_describe_by_motor 
+#Normalidad MAPE por motor de los experimentos
+df_normality_resultados_muestras_positions_per_device
+#MAPE promedio por experimento, es decir promedio entre el MAPE obtenido de los motores que se estan moviendo en un experimento
+grouped_df_describe_perexperiment_positions_ajust 
+print(grouped_df_describe_perexperiment_positions_ajust )
+grouped_df_describe_perexperiment_positions_ajust.columns = pd.MultiIndex.from_tuples([
+    ('Average MAPE of the motors per experiment','Mean'),
+    ('Average MAPE of the motors per experiment','Std')
+])
+print(grouped_df_describe_perexperiment_positions_ajust )
+#MAPE promedio de los promedios por experimento
+describe_means_per_experiment
+print(describe_means_per_experiment)
+describe_means_per_experiment.columns = pd.MultiIndex.from_tuples([
+    ('Average MAPE averages of the motors per experiment','Mean' ),
+    ('Average MAPE averages of the motors per experiment','Std' )
+])
+print(describe_means_per_experiment)
+#Normalidad MAPE por el promedio del MAPE de los motores por experimento 
+df_normality_describe_perexperiment_positions_ajust
 
-writer1 = pd.ExcelWriter(f'{directory}\\results_positions.xlsx', engine='openpyxl')
 
-#df_positions.to_excel(writer1, sheet_name='Pos_Err_Row')
-mape_df_positions_multioutput.to_excel(writer1, sheet_name='Pos_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_multioutput.shape[1]+2)
-combined_df_positions.to_excel(writer1, sheet_name='Pos_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_multioutput.shape[1]+2+mape_df_positions_multioutput.shape[1]+2)
-describe_positions.to_excel(writer1, sheet_name='Pos_Err_Row',startrow=combined_df_positions.shape[0] + 2,startcol=df_positions.shape[1]+2+mse_df_positions_multioutput.shape[1]+2+mape_df_positions_multioutput.shape[1]+2)
-table_df_resultados_muestras_positions.to_excel(writer1, sheet_name='Pos_Err_Row',startrow=combined_df_positions.shape[0] + 2+describe_positions.shape[0]+2,startcol=df_positions.shape[1]+2+mse_df_positions_multioutput.shape[1]+2+mape_df_positions_multioutput.shape[1]+2)
+writer1 = pd.ExcelWriter(f'{directory}\\results_summary.xlsx', engine='openpyxl')
+
+grouped_df_positions_ajustada.to_excel(writer1, sheet_name='Pos_Err_Row')
+grouped_df_positions_ajustada_describe_by_motor.to_excel(writer1, sheet_name='Pos_Err_Row',startrow=grouped_df_positions_ajustada.shape[0]+3+1)
+df_normality_resultados_muestras_positions_per_device.to_excel(writer1, sheet_name='Pos_Err_Row',startrow=grouped_df_positions_ajustada.shape[0]+3+1+grouped_df_positions_ajustada_describe_by_motor.shape[0]+1+1)
+grouped_df_describe_perexperiment_positions_ajust.to_excel(writer1, sheet_name='Pos_Err_Row',startcol=grouped_df_positions_ajustada.shape[1]+2)
+describe_means_per_experiment.to_excel(writer1, sheet_name='Pos_Err_Row',startcol=grouped_df_positions_ajustada.shape[1]+2,startrow=grouped_df_describe_perexperiment_positions_ajust.shape[0]+4)
+df_normality_describe_perexperiment_positions_ajust.to_excel(writer1, sheet_name='Pos_Err_Row',startcol=grouped_df_positions_ajustada.shape[1]+2,startrow=grouped_df_describe_perexperiment_positions_ajust.shape[0]+4+describe_means_per_experiment.shape[0]+4)
+
+combined_df_sampling.to_excel(writer1, sheet_name='MAPE_Sampling')
+result_df.to_excel(writer1, sheet_name='Diferencias de tiempo')
 writer1.close()
 
-writer1 = pd.ExcelWriter(f'{directory}\\results_positions_ajus.xlsx', engine='openpyxl')
-
-#df_positions.to_excel(writer1, sheet_name='Pos_Aj_Err_Row')
-mape_df_positions_ajustada_multioutput.to_excel(writer1, sheet_name='Pos_Aj_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_ajustada_multioutput.shape[1]+2)
-combined_df_positions_ajustada.to_excel(writer1, sheet_name='Pos_Aj_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_ajustada_multioutput.shape[1]+2+2+mape_df_positions_ajustada_multioutput.shape[1])
-describe_positions_ajustada.to_excel(writer1, sheet_name='Pos_Aj_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_ajustada_multioutput.shape[1]+2+2+mape_df_positions_ajustada_multioutput.shape[1], startrow=combined_df_positions_ajustada.shape[0] + 2)
-table_df_resultados_muestras_positions_ajustada.to_excel(writer1, sheet_name='Pos_Aj_Err_Row',startcol=df_positions.shape[1]+2+mse_df_positions_ajustada_multioutput.shape[1]+2+2+mape_df_positions_ajustada_multioutput.shape[1], startrow=combined_df_positions_ajustada.shape[0] + 2+describe_positions_ajustada.shape[0]+2)
-writer1.close()
-
-writer1 = pd.ExcelWriter(f'{directory}\\results_sampling.xlsx', engine='openpyxl')
-
-#sampling_horizontal.to_excel(writer1, sheet_name='Sampling_Err_Row')
-mape_df_sampling_multioutput.to_excel(writer1, sheet_name='Sampling_Err_Row',startcol=sampling_horizontal.shape[1]+2+mse_df_sampling_multioutput.shape[1]+2)
-combined_df_sampling.to_excel(writer1, sheet_name='Sampling_Err_Row',startcol=sampling_horizontal.shape[1]+2+mse_df_sampling_multioutput.shape[1]+2+2+mape_df_sampling_multioutput.shape[1])
-describe_sampling.to_excel(writer1, sheet_name='Sampling_Err_Row',startcol=sampling_horizontal.shape[1]+2+mse_df_sampling_multioutput.shape[1]+2+2+mape_df_sampling_multioutput.shape[1], startrow=combined_df_sampling.shape[0] + 2)
-table_df_resultados_muestras_sampling.to_excel(writer1, sheet_name='Sampling_Err_Row',startcol=sampling_horizontal.shape[1]+2+mse_df_sampling_multioutput.shape[1]+2+2+mape_df_sampling_multioutput.shape[1], startrow=combined_df_sampling.shape[0] + 2+describe_sampling.shape[0]+2)
-writer1.close()
-
-
-# Define colors for the lines
-colors = ['#007acc', '#e85f04', '#d62728', '#9467bd', '#8c564b',
-          '#1f77b4', '#ff7f0e', '#2ca02c', '#17becf', '#bcbd22',
-          '#f7b6d2', '#c7c7c7', '#98df8a', '#ff9896', '#ffbb78',
-          '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#dbdb8d']
-tiempo_teorico_graph = [round(i/frequency, 6) for i in range(int(df_times.iloc[-1,:].max()*frequency))]
-
-# Crear una lista de posición que comience en 25 y alcance 18.75 con velocidad 1 y redondear a 6 cifras significativas
-posicion_teorica_graph = [round(25 - t * velocity, 6) if t * velocity <= (25 - pf) else pf for t in tiempo_teorico_graph]
-# Create a larger title, legend, and labels for the final plot
-plt.figure(figsize=(10, 6))
-for i in range(1,num_experimentos+1,1):
-    plt.plot(df_times.iloc[:, i], df_positions.iloc[:, i], label=f'Experimento {i}', color=colors[i])
-
-plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Teorico',linestyle='dashed' )
-plt.xlabel('Tiempo (s)', fontsize=font_size*1.2)  # Increase font size for the x-axis label
-plt.ylabel('Posición (mm)', fontsize=font_size*1.2)  # Increase font size for the y-axis label
-plt.title('Movimiento real y movimiento teórico para todos los experimentos', fontsize=font_size*1.5)  # Increase font size for the title
-plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
-plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size*0.8)  # Increase font size for the legend
-plt.grid(True)
-
-# Save the plot as an image (you can adjust the extension as needed)
-plt.savefig(f'{directory}\\Posicionvstiempo_experimento_all_spanish.png', bbox_inches='tight')
-plt.close()
-
-
-# Create a larger title, legend, and labels for the final plot in English
-plt.figure(figsize=(10, 6))
-for i in range(num_experimentos):
-    plt.plot(df_times.iloc[:, i], df_positions.iloc[:, i], label=f'Experiment {i}', color=colors[i])
-
-plt.plot(tiempo_teorico_graph, posicion_teorica_graph, label='Theoretical',linestyle='dashed' )
-plt.xlabel('Time (s)', fontsize=font_size*1.2)  # Increase font size for the x-axis label
-plt.ylabel('Position (mm)', fontsize=font_size*1.2)  # Increase font size for the y-axis label
-plt.title('Real motion and theoretical motion obtained for all experiments', fontsize=font_size*1.5)  # Increase font size for the title
-plt.xticks(fontsize=font_size*0.8)  # Increase font size for x-axis ticks
-plt.yticks(fontsize=font_size*0.8)  # Increase font size for y-axis ticks
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size*0.8)  # Increase font size for the legend
-plt.grid(True)
-plt.savefig(f'{directory}\\Posicionvstiempo_experimento_all_eglish.png', bbox_inches='tight')
-plt.close()
 
 
 print('finalizacion ruta', directory,'hora',datetime.datetime.now().strftime("%H:%M:%S"))
