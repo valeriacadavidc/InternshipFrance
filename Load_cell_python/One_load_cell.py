@@ -92,14 +92,14 @@ print('valelinda')
 
 #print('ADC',devices[0].GetChannelXNormalDataRequest(0))
 #devices[0].SetChannelXUnitOfMeasure(0,FUTEK.Devices.UnitsOfMeasure(18))
-sampling_rate_initial=devices[0].GetChannelXSamplingRate(0)
-list_sampling_rates=list(devices[0].GetChannelXSamplingRatePossibleValues(0))
-#devices[0].SetChannelXSamplingRate(0,list_sampling_rates[11]) #Change the sample rate
-sampling_rate_new=devices[0].GetChannelXSamplingRate(0)
-#print('ADC',devices[0].GetChannelXNormalDataRequest(0))
-print('Initial sampling rate',sampling_rate_initial)
-print('Sampling rates available',list_sampling_rates)
-print('New sampling rate',sampling_rate_new)
+# sampling_rate_initial=devices[0].GetChannelXSamplingRate(0)
+# list_sampling_rates=list(devices[0].GetChannelXSamplingRatePossibleValues(0))
+# #devices[0].SetChannelXSamplingRate(0,list_sampling_rates[11]) #Change the sample rate
+# sampling_rate_new=devices[0].GetChannelXSamplingRate(0)
+# #print('ADC',devices[0].GetChannelXNormalDataRequest(0))
+# print('Initial sampling rate',sampling_rate_initial)
+# print('Sampling rates available',list_sampling_rates)
+# print('New sampling rate',sampling_rate_new)
 
-repo.DisconnectDevice( modelNumber,serialNumber)
+# repo.DisconnectDevice( modelNumber,serialNumber)
 

@@ -194,6 +194,8 @@ def stress_relaxation(device,initial_position,forward_position, waiting_time, cy
     except Exception as e:
         print(e)
 
+
+
 def set_parameters(case,velocity,initial_position,final_position=None,polling_rate=1,frequency=100,cycles=None,forward_position=None, waiting_time=None):
     '''
     DOCUMENTACntar 
@@ -327,7 +329,7 @@ def main():
         # print('valelinda')
         #Caso 2 histeresis
 
-        parameters=[0.5,0,2,1,100,1] #velocity,initial position,final position, polling rate, frecuency, ciclos
+        parameters=[1,0,2,1,100,1] #velocity,initial position,final position, polling rate, frecuency, ciclos
     
         #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
         path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Intentos_precarga"
