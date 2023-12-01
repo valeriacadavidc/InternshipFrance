@@ -525,7 +525,9 @@ def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samp
             initial_time = time.perf_counter()
             s.enter(0, 1, write_timestamp, (s,))
             s.run()
-        #Sample Number	Tracking Value	Peak Value	Valley Value	Date	Time Elapsed
+
+        #Linear Stage Position (mm)-Serial Number
+        #
 
         data_position_force = pd.read_csv(f'{path}\{name}.csv')
         data_position_force['Sample Number']=np.arange(0,len(data_position_force))
@@ -546,18 +548,48 @@ def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samp
                     # Create the new column name
                     new_column_name = f'Tracking Value ({desired_uni_force})-{serial_number}'
                     data_position_force[new_column_name]=data_position_force[column]*conversion_factor
+
+                    #Peak Values
+                    current_peak_index = 0
+                    current_peak_value = data_position_force.loc[current_peak_index, new_column_name]
+
+                    # Iterate over the DataFrame
+                    for index, value in enumerate(data_position_force[new_column_name]):
+                        # Check if the current value is greater than the current peak value
+                        if value > current_peak_value:
+                            current_peak_index = index
+                            current_peak_value = value
+
+                        # Update the DataFrame with the current peak value
+                        data_position_force.loc[index, f'Peak Value ({desired_uni_force})-{serial_number}'] = current_peak_value
+
+                    #Valley Value
+                    current_valley_index = 0
+                    current_valley_value = data_position_force.loc[current_valley_index, new_column_name]
+
+                    # Iterate over the DataFrame
+                    for index, value in enumerate(data_position_force[new_column_name]):
+                        # Check if the current value is smaller than the current valley value
+                        if value < current_valley_value:
+                            current_valley_index = index
+                            current_valley_value = value
+
+                        # Update the DataFrame with the current valley value
+                        data_position_force.loc[index, f'Valley Value ({desired_uni_force})-{serial_number}'] = current_valley_value
+
+
                     # Rename the column
-                    data_position_force.rename(columns={column: new_column_name}, inplace=True)
+                    #data_position_force.rename(columns={column: new_column_name}, inplace=True)
 
 
         # data_position_force['seconds']=data_position_force['seconds'] - data_position_force['seconds'].iloc[0] #time difference 
         # columns_real=[columna for columna in data_position_force.columns if 'real_position_' in columna]
         # columns_relative = [column.replace('real_position_', 'relative_position_') for column in columns_real]
         # data_position_force[columns_relative]=data_position_force[columns_real].iloc[0]-data_position_force[columns_real]
-        # with pd.ExcelWriter('vale.xlsx', engine='openpyxl') as writer:
-        # # Escribir el DataFrame en la hoja seleccionada
-        #     data_position_force.to_excel(writer, index=False)
     
+        writer = pd.ExcelWriter(f'{path}\\{name}.xlsx', engine='openpyxl')
+        data_position_force.to_excel(writer, sheet_name='Data')
+        writer.close()
     except Exception as e:
         # Handle the exception here, you can print an error message or log it
         print(f"An exception occurred: {str(e)}")
@@ -583,67 +615,67 @@ def main():
   
         #CASO 1: shift
   
-        parameters=[0.5,0,5,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
-        #for i in range(20): if I want to run
-        velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
-        # Do the homing and set the velocity
-        # Perform homing and place the device in the initial position
-        # Initialize tasks in parallel for all the devices
-        i=25
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Execute home_device in parallel for all devices
-         
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
-                # Wait for all of the tasks to complete
-            concurrent.futures.wait(futures)
-        name=f"Shift_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_exp_{i}_all"
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples,desired_uni_force='N', path=path, name=name)
-            # Start the tasks in futures
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
-            # Wait for all of the tasks to complete
-            concurrent.futures.wait([p1] + futures)
-        print(f'Fin ciclo shif device {i}')
-        print('valelinda')
-
-        #CASO 2 histeresis
-
-        # parameters=[0.5,0,10,1,100,1] #velocity,initial position,final position, polling rate, frecuency, ciclos
-    
+        # parameters=[0.5,0,5,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
         # path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
         # #for i in range(20): if I want to run
-        # velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=2,velocity=parameters[0],
-        # initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=parameters[5],forward_position=None,
-        # waiting_time=None)
+        # velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
         # # Do the homing and set the velocity
         # # Perform homing and place the device in the initial position
         # # Initialize tasks in parallel for all the devices
-        # i=1
+        # i=25
         # with concurrent.futures.ThreadPoolExecutor() as executor:
         #     # Execute home_device in parallel for all devices
+         
+        #     futures = []
         #     for device in thorlabs_devices.devices.values():
-        #         executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
-        # name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_all"
+        #         futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
+        #         # Wait for all of the tasks to complete
+        #     concurrent.futures.wait(futures)
+        # name=f"Shift_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_exp_{i}_all"
+
         # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         #     p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples,desired_uni_force='N', path=path, name=name)
         #     # Start the tasks in futures
         #     futures = []
         #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(hysteresis,device,initial_position, final_position, cycles,waitTimeout))
+        #         futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
         #     # Wait for all of the tasks to complete
         #     concurrent.futures.wait([p1] + futures)
-        # print(f'Fin ciclo {i}')
-        # print('valelinda3')
+        # print(f'Fin ciclo shif device {i}')
+        # print('valelinda')
+
+        #CASO 2 histeresis
+
+        parameters=[1.5,0,15,1,50,10] #velocity,initial position,final position, polling rate, frecuency, ciclos
+    
+        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
+        #for i in range(20): if I want to run
+        velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=2,velocity=parameters[0],
+        initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=parameters[5],forward_position=None,
+        waiting_time=None)
+        # Do the homing and set the velocity
+        # Perform homing and place the device in the initial position
+        # Initialize tasks in parallel for all the devices
+        i=1
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Execute home_device in parallel for all devices
+            for device in thorlabs_devices.devices.values():
+                executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
+        name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_all"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples,desired_uni_force='N', path=path, name=name)
+            # Start the tasks in futures
+            futures = []
+            for device in thorlabs_devices.devices.values():
+                futures.append(executor.submit(hysteresis,device,initial_position, final_position, cycles,waitTimeout))
+            # Wait for all of the tasks to complete
+            concurrent.futures.wait([p1] + futures)
+        print(f'Fin ciclo {i}')
+        print('valelinda3')
 
         #CASO 3 stress relaxation
 
-        # parameters=[2,0,1,100,2,5,5] #velocity mm/s,initial position mm, polling rate ms y entero, frecuency Hz,cycles,foward position mm,waiting_time
+        # parameters=[2,0,1,50,5,5,5] #velocity mm/s,initial position mm, polling rate ms y entero, frecuency Hz,cycles,foward position mm,waiting_time
         # path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
         # #for i in range(20): if I want to run
         # velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=3,velocity=parameters[0],
