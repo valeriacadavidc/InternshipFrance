@@ -2,7 +2,7 @@
 import os
 import time
 import clr
-
+import numba
 import System
 from System import Decimal
 import pandas as pd
@@ -75,7 +75,7 @@ class ThorlabsDevices:
                     assert device.IsSettingsInitialized() is True
                 
                 
-                device_name = device.DeviceName # Get device name
+                actuator = device.DeviceName # Get device name
                 device_info = device.GetDeviceInfo() # Get Device information
 
                 # Before homing or moving the device, ensure the motor's configuration is loaded
@@ -83,10 +83,10 @@ class ThorlabsDevices:
                     serial_number, DeviceConfiguration.DeviceSettingsUseOptionType.UseFileSettings)
 
                 if motor_config is not None:
-                    actuator = motor_config.DeviceSettingsName
-                    print(f"Device connected to the driver {actuator}")
+                    device_name = motor_config.DeviceSettingsName
+                    print(f"Device connected to the driver {device_name}")
                 self.devices[serial_number] = device
-                print(f"Device name: {device_name}")
+                print(f"Device name: {actuator}")
                 print(device_info.Description)
 
                 print(f"Connected to the device with serial number {serial_number}\n")
@@ -210,28 +210,39 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
     DOCUMENTACntar 
     
     '''
+    #No frecuencias menores a 1/0.016 aprox 60 Hz
  
     initial_position=initial_position+25 #Initial position must be
+    
+
     if case==1:
-        
+                
+        if frequency>60:
+            frequency=60
+            sample_time = 0
+        else:
+            sample_time = 1 / frequency
         final_position=25-final_position
         execution_time=(initial_position-final_position)/velocity
         num_samples = int((execution_time * 1.1 + 16) * frequency)
-        print(num_samples)
-        sample_time = 1 / frequency
+
         waitTimeout=execution_time*1000+2000
         waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout
     if case==2:
-        
+        if frequency>60:
+            frequency=60
+            sample_time = 0
+        else:
+            sample_time = 1 / frequency
         final_position=25-final_position
         execution_time= (initial_position-final_position)*2*cycles/velocity
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
         waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)#Duration to wait for command to execute
         num_samples = int((execution_time * 1.1 + 16) * frequency)
-        sample_time = 1 / frequency
+      
         return velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout
     if case==3:
         while (True):
@@ -239,12 +250,16 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
                 cycles-=1
             if forward_position*cycles<=20:
                 break
-            
+        if frequency>60:
+            frequency=60
+            sample_time = 0
+        else:
+            sample_time = 1 / frequency
         execution_time=(forward_position/velocity+waiting_time)*cycles
         waitTimeout=forward_position/velocity*1000
         waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
-        sample_time = 1 / frequency
+      
         num_samples = int((execution_time * 1.1 + 16) * frequency)
         return velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout
     
@@ -484,112 +499,127 @@ def force_units_and_conversion_factor(from_unit='lb', to_unit='N'):
 ('Force',314,'long ton (UK)','LT','long ton (UK)','LT',1,0),
     ]
     columns = ["Unit Type", "Conversion", "Convert From", "From Unit", "Convert To", "To Unit", "Scale Factor", "Offset"]
-
     df_units_force = pd.DataFrame(data_units_force,columns=columns)
     conversion_factor = df_units_force[(df_units_force['From Unit'] == from_unit) & (df_units_force['To Unit'] == to_unit)]['Scale Factor'].values[0]
     force_units=list(df_units_force["From Unit"].unique())
     return force_units,conversion_factor
 
+def collected_data_modification(path,name,initial_date_hour,desired_uni_force,serial_numbers_motors,initial_positions_motors,serial_numbers_initial_forces,initial_forces):
+    data = pd.read_csv(f'{path}\{name}.csv')
+    data['Sample Number']=np.arange(0,len(data))
+    data['Date']=initial_date_hour +pd.to_timedelta(data['Time Elapsed'], unit='s')
+    data['Time Elapsed']=pd.to_datetime(data['Time Elapsed'], unit='s').dt.time
+    
+    #Ver las columnas que tienen 0 y elimar esas filas 
 
-def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samples, desired_uni_force,path, name):
+    for serial_number in serial_numbers_motors:
+        for column in data.columns:
+            if serial_number in column:
+                data[column]=float(str(initial_positions_motors[serial_numbers_motors.index(serial_number)]))-data[column]
+                
+    load_cells_columns=[]
+    for column in data.columns:
+        # Check if the column name contains 'load_cell'
+        if 'Tracking Value' in column:
+            # Use regular expressions to extract unit and serial number
+            match = re.search(r'\(([^)]+)\)-(\d+)', column)
+            if match:
+                unit= match.group(1)
+                serial_number  = match.group(2)
+                data[column]=data[column]-initial_forces[serial_numbers_initial_forces.index(serial_number)]
+                
+                _,conversion_factor=force_units_and_conversion_factor(from_unit=unit, to_unit=desired_uni_force)
+                # Create the new column name
+                new_column_name = f'Tracking Value ({desired_uni_force})-{serial_number}'
+                data[new_column_name]=data[column]*conversion_factor
+
+                #Peak Values
+                current_peak_index = 0
+                current_peak_value = data.loc[current_peak_index, new_column_name]
+
+                # Iterate over the DataFrame
+                for index, value in enumerate(data[new_column_name]):
+                    # Check if the current value is greater than the current peak value
+                    if value > current_peak_value:
+                        current_peak_index = index
+                        current_peak_value = value
+
+                    # Update the DataFrame with the current peak value
+                    data.loc[index, f'Peak Value ({desired_uni_force})-{serial_number}'] = current_peak_value
+
+                #Valley Value
+                current_valley_index = 0
+                current_valley_value = data.loc[current_valley_index, new_column_name]
+
+                # Iterate over the DataFrame
+                for index, value in enumerate(data[new_column_name]):
+                    # Check if the current value is smaller than the current valley value
+                    if value < current_valley_value:
+                        current_valley_index = index
+                        current_valley_value = value
+
+                    # Update the DataFrame with the current valley value
+                    data.loc[index, f'Valley Value ({desired_uni_force})-{serial_number}'] = current_valley_value
+
+                load_cells_columns.append(new_column_name)
+                load_cells_columns.append(f'Peak Value ({desired_uni_force})-{serial_number}')
+                load_cells_columns.append(f'Valley Value ({desired_uni_force})-{serial_number}')
+                
+                data=data.drop(column,axis=1)
+                # Rename the column
+                #data.rename(columns={column: new_column_name}, inplace=True)
+
+    
+    desired_order=['Sample Number']+ load_cells_columns +[col for col in data.columns if 'Linear Stage Position (mm)' in col]+['Date','Time Elapsed']
+    data=data[desired_order]
+    writer = pd.ExcelWriter(f'{path}\\{name}.xlsx', engine='openpyxl')
+    data.to_excel(writer, sheet_name='Data')
+    writer.close()
+
+
+def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samples, desired_uni_force,serial_numbers_initial_positions, initial_positions,serial_numbers_initial_forces,initial_forces,path, name):
     #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses sched
     try:
         # Get the list of devices from the dictionary
         devices_list = list(motor_devices_dictionary.values())
         sample = 0
-        columnas = ['seconds'] + ['real_position_' + elemento +'_mm' for elemento in motor_devices_dictionary.keys()]+['load_cell_'+loadcell.GetInstrumentSerialNumber()+ '_'+ str(loadcell.GetChannelXUnitOfMeasure(0)) for loadcell in load_cells_list]
+        columnas = ['Time Elapsed'] +['Tracking Value (' +str(loadcell.GetChannelXUnitOfMeasure(0))+')-'+loadcell.GetInstrumentSerialNumber() for loadcell in load_cells_list]+ ['Linear Stage Position (mm)-' + elemento for elemento in motor_devices_dictionary.keys()]
 
         # Obtiene la fecha y hora actual
-        fecha_hora_inicial = datetime.now()
+        initial_date_hour = datetime.now()
         # Create a CSV file to save the data
         csv_file_path = f'{path}\\{name}.csv'
         with open(csv_file_path, mode='w', newline='') as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(columnas) # Write the header to the CSV file
+       
             def write_timestamp(sc):
                 """This function writes a timestamp and device positions to the CSV file."""
                 #initial_time=time.perf_counter()
-                nonlocal sample, initial_time
+                nonlocal sample, initial_time,t1,t2
                 # Combine the results into a single array at the same time     
-                data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]+[loadcell.GetChannelXReading(0) for loadcell in load_cells_list]
-                #data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]+list(map(lambda loadcell: loadcell.GetChannelXReading(0), load_cells_list))
-                #data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]
-                
+                data_line = [time.perf_counter()-initial_time]+[loadcell.GetChannelXReading(0) for loadcell in load_cells_list] + [device.Position for device in devices_list]              
                 sample += 1
                 csv_writer.writerow(data_line)
                 if sample < num_samples:
-                    sc.enter(sample_time, 1, write_timestamp, (sc,))
+                    t1=time.perf_counter()
+                    sc.enter((sample_time-t2)*0.6, 1, write_timestamp, (sc,))
+                    t2=time.perf_counter()-t1
+                    print(t2)
             # Create a scheduler object
             s = sched.scheduler(time.perf_counter, time.sleep)
             # Schedule the function `write_timestamp()` to run immediately and then repeatedly every sample_time seconds
             initial_time = time.perf_counter()
+            t1=time.perf_counter()
             s.enter(0, 1, write_timestamp, (s,))
+            t2=time.perf_counter()-t1
             s.run()
 
         #Linear Stage Position (mm)-Serial Number
-        #
+        collected_data_modification(path,name,initial_date_hour,desired_uni_force,serial_numbers_initial_positions,initial_positions,serial_numbers_initial_forces,initial_forces)
 
-        data_position_force = pd.read_csv(f'{path}\{name}.csv')
-        data_position_force['Sample Number']=np.arange(0,len(data_position_force))
-        data_position_force['Date']=fecha_hora_inicial +pd.to_timedelta(data_position_force['seconds'], unit='s')
-        data_position_force['Time Elapsed']=pd.to_datetime(data_position_force['seconds'], unit='s').dt.time
-
-        for column in data_position_force.columns:
-            # Check if the column name contains 'load_cell'
-            if 'load_cell' in column:
-                # Use regular expressions to extract unit and serial number
-                match = re.match(r'load_cell_(\d+)_(\w+)', column)
-                if match:
-                    serial_number = match.group(1)
-                    unit = match.group(2)
-                    
-                    _,conversion_factor=force_units_and_conversion_factor(from_unit=unit, to_unit=desired_uni_force)
-                    
-                    # Create the new column name
-                    new_column_name = f'Tracking Value ({desired_uni_force})-{serial_number}'
-                    data_position_force[new_column_name]=data_position_force[column]*conversion_factor
-
-                    #Peak Values
-                    current_peak_index = 0
-                    current_peak_value = data_position_force.loc[current_peak_index, new_column_name]
-
-                    # Iterate over the DataFrame
-                    for index, value in enumerate(data_position_force[new_column_name]):
-                        # Check if the current value is greater than the current peak value
-                        if value > current_peak_value:
-                            current_peak_index = index
-                            current_peak_value = value
-
-                        # Update the DataFrame with the current peak value
-                        data_position_force.loc[index, f'Peak Value ({desired_uni_force})-{serial_number}'] = current_peak_value
-
-                    #Valley Value
-                    current_valley_index = 0
-                    current_valley_value = data_position_force.loc[current_valley_index, new_column_name]
-
-                    # Iterate over the DataFrame
-                    for index, value in enumerate(data_position_force[new_column_name]):
-                        # Check if the current value is smaller than the current valley value
-                        if value < current_valley_value:
-                            current_valley_index = index
-                            current_valley_value = value
-
-                        # Update the DataFrame with the current valley value
-                        data_position_force.loc[index, f'Valley Value ({desired_uni_force})-{serial_number}'] = current_valley_value
-
-
-                    # Rename the column
-                    #data_position_force.rename(columns={column: new_column_name}, inplace=True)
-
-
-        # data_position_force['seconds']=data_position_force['seconds'] - data_position_force['seconds'].iloc[0] #time difference 
-        # columns_real=[columna for columna in data_position_force.columns if 'real_position_' in columna]
-        # columns_relative = [column.replace('real_position_', 'relative_position_') for column in columns_real]
-        # data_position_force[columns_relative]=data_position_force[columns_real].iloc[0]-data_position_force[columns_real]
-    
-        writer = pd.ExcelWriter(f'{path}\\{name}.xlsx', engine='openpyxl')
-        data_position_force.to_excel(writer, sheet_name='Data')
-        writer.close()
+        
+        
     except Exception as e:
         # Handle the exception here, you can print an error message or log it
         print(f"An exception occurred: {str(e)}")
@@ -646,7 +676,7 @@ def main():
 
         #CASO 2 histeresis
 
-        parameters=[1.5,0,15,1,50,10] #velocity,initial position,final position, polling rate, frecuency, ciclos
+        parameters=[2,0,15,1,50,3] #velocity,initial position,final position, polling rate, frecuency, ciclos
     
         path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
         #for i in range(20): if I want to run
@@ -661,9 +691,17 @@ def main():
             # Execute home_device in parallel for all devices
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
-        name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_all"
+        name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_data"
+        
+        time.sleep(2)
+        motor_serials=list(thorlabs_devices.devices.keys())
+        motor_positions=[device.Position for device in list(thorlabs_devices.devices.values())]              
+
+        loadcells_serials=[loadcell.GetInstrumentSerialNumber() for loadcell in devices_FUTEK] 
+        loadcells_forces= [loadcell.GetChannelXReading(0) for loadcell in devices_FUTEK]
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples,desired_uni_force='N', path=path, name=name)
+            p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples,desired_uni_force='N', 
+                               serial_numbers_initial_positions=motor_serials,initial_positions=motor_positions,serial_numbers_initial_forces=loadcells_serials,initial_forces=loadcells_forces, path=path, name=name)
             # Start the tasks in futures
             futures = []
             for device in thorlabs_devices.devices.values():
