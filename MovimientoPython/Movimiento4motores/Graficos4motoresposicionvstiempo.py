@@ -77,6 +77,7 @@ def plot_graph(df, columns, colors, directory, filename, language='spanish', exc
     plt.close()
 
 
+
 directory=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\intentos_stress_relaxation"
 #directory=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Intentos_precarga"
 filename="stress_relaxation_vel_0.5_pi_0_pollrate_1_samplefreq_100_cycles_10_fp_1_waittime_10_exp_1_all.csv"

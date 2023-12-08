@@ -19,6 +19,12 @@ import csv
 import sched
 import re
 from datetime import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import dask.dataframe as dd
+from openpyxl.drawing.image import Image
+from openpyxl import load_workbook
+from matplotlib.ticker import MaxNLocator
 
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
@@ -217,21 +223,21 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
 
     if case==1:
                 
-        if frequency>60:
+        if frequency>=60:
             frequency=60
             sample_time = 0
         else:
             sample_time = 1 / frequency
         final_position=25-final_position
         execution_time=(initial_position-final_position)/velocity
-        num_samples = int((execution_time * 1.1 + 16) * frequency)
+        num_samples = int((execution_time * 1.1 + 11) * frequency)
 
         waitTimeout=execution_time*1000+2000
-        waitTimeout+=waitTimeout*0.7
+        waitTimeout+=waitTimeout*0.8
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout
     if case==2:
-        if frequency>60:
+        if frequency>=60:
             frequency=60
             sample_time = 0
         else:
@@ -239,9 +245,9 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
         final_position=25-final_position
         execution_time= (initial_position-final_position)*2*cycles/velocity
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
-        waitTimeout+=waitTimeout*0.7
+        waitTimeout+=waitTimeout*0.8
         waitTimeout=System.Convert.ToUInt64(waitTimeout)#Duration to wait for command to execute
-        num_samples = int((execution_time * 1.1 + 16) * frequency)
+        num_samples = int(((execution_time * 1.1 + 11) * frequency)*0.8)
       
         return velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout
     if case==3:
@@ -250,17 +256,17 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
                 cycles-=1
             if forward_position*cycles<=20:
                 break
-        if frequency>60:
+        if frequency>=60:
             frequency=60
             sample_time = 0
         else:
             sample_time = 1 / frequency
         execution_time=(forward_position/velocity+waiting_time)*cycles
         waitTimeout=forward_position/velocity*1000
-        waitTimeout+=waitTimeout*0.7
+        waitTimeout+=waitTimeout*0.8
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
       
-        num_samples = int((execution_time * 1.1 + 16) * frequency)
+        num_samples = int((execution_time * 1.1 + 11) * frequency)
         return velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout
     
     
@@ -500,82 +506,194 @@ def force_units_and_conversion_factor(from_unit='lb', to_unit='N'):
     ]
     columns = ["Unit Type", "Conversion", "Convert From", "From Unit", "Convert To", "To Unit", "Scale Factor", "Offset"]
     df_units_force = pd.DataFrame(data_units_force,columns=columns)
-    conversion_factor = df_units_force[(df_units_force['From Unit'] == from_unit) & (df_units_force['To Unit'] == to_unit)]['Scale Factor'].values[0]
+    conversion_factor = df_units_force[((df_units_force['From Unit'] == from_unit) | (df_units_force["Convert From"] == from_unit)) & (df_units_force['To Unit'] == to_unit)]['Scale Factor'].values[0]
+    #conversion_factor = df_units_force[(df_units_force['From Unit'] == from_unit) & (df_units_force['To Unit'] == to_unit)]['Scale Factor'].values[0]
     force_units=list(df_units_force["From Unit"].unique())
     return force_units,conversion_factor
 
+
+def plot_graph_positions(df, columns,path,name, language='spanish'):
+    import matplotlib
+    # Specify the backend explicitly
+    matplotlib.use("TkAgg")  # Use "TkAgg" or another suitable backend
+
+    import matplotlib.pyplot as plt
+    colors = ["#20B2AA","#FF6347",'#007acc', '#e85f04',"#ff7f0e","#ff7f0e",'#d62728',"#4B0082",  '#9467bd', '#8c564b',
+              '#1f77b4', '#ff7f0e', '#2ca02c', '#17becf', '#bcbd22',
+              '#f7b6d2', '#c7c7c7', '#98df8a', '#ff9896', '#ffbb78',
+              '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#dbdb8d']
+    font_size = 14
+    linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1, 1, 1)), (0, (5, 10)), (0, (3, 10, 1, 10))]
+    
+    # Create a Figure instance
+    _, ax = plt.subplots(figsize=(12, 8))
+    for i in range(len(columns)):
+
+        ax.plot(df['seconds'], df[columns[i]], label=re.findall(r"\d+", columns[i])[0], color=colors[i], linestyle=linestyles[i])
+    if language == 'spanish':
+        legend = ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size * 0.8)
+        legend.set_title('Etapa lineal', prop={'size': font_size * 0.8})
+        ax.set_xlabel('Tiempo transcurrido (s)', fontsize=font_size * 1.2)
+        ax.set_ylabel('Posición (mm)', fontsize=font_size * 1.2)
+        ax.set_title('Movimiento de las etapas lineales motorizadas', fontsize=font_size)
+    elif language == 'english':
+        legend = ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size * 0.8)
+        legend.set_title('Linear stage', prop={'size': font_size * 0.8})
+        ax.set_xlabel('Time Elapsed (s)', fontsize=font_size * 1.2)
+        ax.set_ylabel('Position (mm)', fontsize=font_size * 1.2)
+        ax.set_title('Motion of motorized linear stages', fontsize=font_size)
+  
+
+    # Rotar las etiquetas del eje X después de haber establecido las marcas del eje X
+    #ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    ax.tick_params(axis='x', labelsize=font_size * 0.8)
+    ax.tick_params(axis='y', labelsize=font_size * 0.8)
+    plt.tight_layout()
+    plt.savefig(f'{path}\{name}_positions.png')
+    # Return the Figure instance
+    return f'{path}\{name}_positions.png'
+
+def plot_graph_forces(df, columns, path,name,language='spanish'):
+    import matplotlib
+    # Specify the backend explicitly
+    matplotlib.use("TkAgg")  # Use "TkAgg" or another suitable backend
+
+    import matplotlib.pyplot as plt
+
+    colors = ["#1f77b4", "#d62728", "#2ca02c", "#ff7f0e", "#008080", "#ff4500",
+                  "#3cb371", "#ff6347", "#32cd32", "#ff0000", "#4682b4", "#dc143c",
+                  "#20b2aa", "#8b4513", "#00fa9a", "#ff8c00", "#4169e1", "#ff1493",
+                  "#00ced1", "#800000", "#556b2f", "#008000", "#b22222"]
+
+    font_size = 14
+    linestyles = ['-', '--', '-.','-', ':', (0, (3, 1, 1, 1, 1, 1)),'-' ,(0, (5, 10)), (0, (3, 10, 1, 10)),'-',
+               '--', '-.','-', ':', (0, (3, 1, 1, 1, 1, 1)), '-',(0, (5, 10)), (0, (3, 10, 1, 10)),'-',
+             '--', '-.', ':']
+    # Create a Figure instance
+    _, ax = plt.subplots(figsize=(12, 8))
+    
+    for i in range(len(columns)):
+        match = re.findall(r"\w+", columns[i])
+        first_word, serial_number = match[0],match[-1]
+    
+        ax.plot(df['seconds'], df[columns[i]], label=f"{serial_number} ({first_word})", color=colors[i], linestyle=linestyles[i])
+    unit=re.search(r'\(([^)]+)\)', columns[0]).group(1)
+    if language == 'spanish':
+        legend = ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size * 0.8)
+        legend.set_title('Celda de carga', prop={'size': font_size * 0.8})
+        ax.set_xlabel('Tiempo transcurrido (s)', fontsize=font_size * 1.2)
+        ax.set_ylabel(f'Fuerza ({unit})', fontsize=font_size * 1.2)
+        ax.set_title('Fuerza vs Tiempo transcurrido', fontsize=font_size)
+    elif language == 'english':
+        legend = ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=font_size * 0.8)
+        legend.set_title('Load cell', prop={'size': font_size * 0.8})
+        ax.set_xlabel('Time elapsed (s)', fontsize=font_size * 1.2)
+        ax.set_ylabel(f'Force ({unit})', fontsize=font_size * 1.2)
+        ax.set_title('Force vs Time elapsed', fontsize=font_size)
+
+    ax.tick_params(axis='x', labelsize=font_size * 0.8)
+    ax.tick_params(axis='y', labelsize=font_size * 0.8)
+    plt.tight_layout()
+    
+    plt.savefig(f'{path}\{name}_forces.png')
+    # Return the Figure instance
+    return f'{path}\{name}_forces.png'
+  
+
 def collected_data_modification(path,name,initial_date_hour,desired_uni_force,serial_numbers_motors,initial_positions_motors,serial_numbers_initial_forces,initial_forces):
-    data = pd.read_csv(f'{path}\{name}.csv')
-    data['Sample Number']=np.arange(0,len(data))
-    data['Date']=initial_date_hour +pd.to_timedelta(data['Time Elapsed'], unit='s')
-    data['Time Elapsed']=pd.to_datetime(data['Time Elapsed'], unit='s').dt.time
-    
-    #Ver las columnas que tienen 0 y elimar esas filas 
+    try:
+        data = pd.read_csv(f'{path}\{name}.csv')
+        
+        data['Date']=initial_date_hour +pd.to_timedelta(data['Time Elapsed'], unit='s')
+        #data['sampling_time']=data["Time Elapsed"].diff()
+        data['seconds']=data['Time Elapsed'].copy()
+        data['Time Elapsed']=pd.to_datetime(data['Time Elapsed'], unit='s').dt.time
+        
+        #Ver las columnas que tienen 0 y elimar esas filas 
+        index_to_delete=[]
+        for serial_number in serial_numbers_motors:
+            for column in data.columns:
+                if serial_number in column:
+                    
+                    positive_index=[elemento -1 for elemento in list(data[data[column].diff()>1].index)]
+                    negative_index= list(data[data[column].diff()<-1].index)
+                    index_only_column=positive_index+negative_index
+                    index_only_column_veryfied=data[column][index_only_column].index[data[column][index_only_column] == 0].tolist()
+                    index_to_delete=index_to_delete+index_only_column_veryfied
+                    data[column]=float(str(initial_positions_motors[serial_numbers_motors.index(serial_number)]))-data[column]
 
-    for serial_number in serial_numbers_motors:
+        data = data.drop(list(set(index_to_delete)), axis=0)
+        data = data.reset_index(drop=True)
+        load_cells_columns=[]
         for column in data.columns:
-            if serial_number in column:
-                data[column]=float(str(initial_positions_motors[serial_numbers_motors.index(serial_number)]))-data[column]
-                
-    load_cells_columns=[]
-    for column in data.columns:
-        # Check if the column name contains 'load_cell'
-        if 'Tracking Value' in column:
-            # Use regular expressions to extract unit and serial number
-            match = re.search(r'\(([^)]+)\)-(\d+)', column)
-            if match:
-                unit= match.group(1)
-                serial_number  = match.group(2)
-                data[column]=data[column]-initial_forces[serial_numbers_initial_forces.index(serial_number)]
-                
-                _,conversion_factor=force_units_and_conversion_factor(from_unit=unit, to_unit=desired_uni_force)
-                # Create the new column name
-                new_column_name = f'Tracking Value ({desired_uni_force})-{serial_number}'
-                data[new_column_name]=data[column]*conversion_factor
+            # Check if the column name contains 'load_cell'
+            if 'Tracking Value' in column:
+                # Use regular expressions to extract unit and serial number
+                match = re.search(r'\(([^)]+)\)-(\d+)', column)
+                if match:
+                    unit= match.group(1)
+                    serial_number  = match.group(2)
+                    data[column]=data[column]-initial_forces[serial_numbers_initial_forces.index(serial_number)]
+                    
+                    _,conversion_factor=force_units_and_conversion_factor(from_unit=unit, to_unit=desired_uni_force)
+                    # Create the new column name
+                    new_column_name = f'Tracking Value ({desired_uni_force})-{serial_number}'
+                    data[new_column_name]=data[column]*conversion_factor
 
-                #Peak Values
-                current_peak_index = 0
-                current_peak_value = data.loc[current_peak_index, new_column_name]
+                    #Peak Values
+                    current_peak_index = 0
+                    current_peak_value = data.loc[current_peak_index, new_column_name]
 
-                # Iterate over the DataFrame
-                for index, value in enumerate(data[new_column_name]):
-                    # Check if the current value is greater than the current peak value
-                    if value > current_peak_value:
-                        current_peak_index = index
-                        current_peak_value = value
+                    # Iterate over the DataFrame
+                    for index, value in enumerate(data[new_column_name]):
+                        # Check if the current value is greater than the current peak value
+                        if value > current_peak_value:
+                            current_peak_index = index
+                            current_peak_value = value
 
-                    # Update the DataFrame with the current peak value
-                    data.loc[index, f'Peak Value ({desired_uni_force})-{serial_number}'] = current_peak_value
+                        # Update the DataFrame with the current peak value
+                        data.loc[index, f'Peak Value ({desired_uni_force})-{serial_number}'] = current_peak_value
 
-                #Valley Value
-                current_valley_index = 0
-                current_valley_value = data.loc[current_valley_index, new_column_name]
+                    #Valley Value
+                    current_valley_index = 0
+                    current_valley_value = data.loc[current_valley_index, new_column_name]
 
-                # Iterate over the DataFrame
-                for index, value in enumerate(data[new_column_name]):
-                    # Check if the current value is smaller than the current valley value
-                    if value < current_valley_value:
-                        current_valley_index = index
-                        current_valley_value = value
+                    # Iterate over the DataFrame
+                    for index, value in enumerate(data[new_column_name]):
+                        # Check if the current value is smaller than the current valley value
+                        if value < current_valley_value:
+                            current_valley_index = index
+                            current_valley_value = value
 
-                    # Update the DataFrame with the current valley value
-                    data.loc[index, f'Valley Value ({desired_uni_force})-{serial_number}'] = current_valley_value
+                        # Update the DataFrame with the current valley value
+                        data.loc[index, f'Valley Value ({desired_uni_force})-{serial_number}'] = current_valley_value
 
-                load_cells_columns.append(new_column_name)
-                load_cells_columns.append(f'Peak Value ({desired_uni_force})-{serial_number}')
-                load_cells_columns.append(f'Valley Value ({desired_uni_force})-{serial_number}')
-                
-                data=data.drop(column,axis=1)
-                # Rename the column
-                #data.rename(columns={column: new_column_name}, inplace=True)
+                    load_cells_columns.append(new_column_name)
+                    load_cells_columns.append(f'Peak Value ({desired_uni_force})-{serial_number}')
+                    load_cells_columns.append(f'Valley Value ({desired_uni_force})-{serial_number}')
+                    
+                    data=data.drop(column,axis=1)
+                    # Rename the column
+                    #data.rename(columns={column: new_column_name}, inplace=True)
 
+        #print(data['sampling_time'].describe())
+
+
+        data['Sample Number']=np.arange(0,len(data))
+        desired_order=['Sample Number']+ load_cells_columns +[col for col in data.columns if 'Linear Stage Position (mm)' in col]+['Date','Time Elapsed']
+        data_save=data[desired_order]
+        writer = pd.ExcelWriter(f'{path}\\{name}.xlsx', engine='openpyxl')
+        data_save.to_excel(writer, sheet_name='Data')
+        writer.close()
+        positions_graph=plot_graph_positions(data, columns=[col for col in data.columns if 'Linear Stage Position (mm)' in col],path=path,name=name, language='english')
+        forces_graph=plot_graph_forces(data, columns=load_cells_columns,path=path,name=name, language='english')
+       
+     
+       
+    except Exception as e:
+        # Handle the exception here, you can print an error message or log it
+        print(f"An exception occurred in the function collected_data_modification: {str(e)}")
     
-    desired_order=['Sample Number']+ load_cells_columns +[col for col in data.columns if 'Linear Stage Position (mm)' in col]+['Date','Time Elapsed']
-    data=data[desired_order]
-    writer = pd.ExcelWriter(f'{path}\\{name}.xlsx', engine='openpyxl')
-    data.to_excel(writer, sheet_name='Data')
-    writer.close()
-
 
 def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samples, desired_uni_force,serial_numbers_initial_positions, initial_positions,serial_numbers_initial_forces,initial_forces,path, name):
     #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses sched
@@ -603,9 +721,9 @@ def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samp
                 csv_writer.writerow(data_line)
                 if sample < num_samples:
                     t1=time.perf_counter()
-                    sc.enter((sample_time-t2)*0.6, 1, write_timestamp, (sc,))
+                    sc.enter((data_line[0]+sample_time-time.perf_counter()+initial_time-t2) * 0.9 if sample_time != 0 else 0, 1, write_timestamp, (sc,))
                     t2=time.perf_counter()-t1
-                    print(t2)
+                   
             # Create a scheduler object
             s = sched.scheduler(time.perf_counter, time.sleep)
             # Schedule the function `write_timestamp()` to run immediately and then repeatedly every sample_time seconds
@@ -676,7 +794,7 @@ def main():
 
         #CASO 2 histeresis
 
-        parameters=[2,0,15,1,50,3] #velocity,initial position,final position, polling rate, frecuency, ciclos
+        parameters=[1,0,6,1,60,4] #velocity,initial position,final position, polling rate, frecuency, ciclos
     
         path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
         #for i in range(20): if I want to run
@@ -692,8 +810,10 @@ def main():
             for device in thorlabs_devices.devices.values():
                 executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
         name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_data"
-        
-        time.sleep(2)
+        print('PREPARE TEST')
+        time.sleep(30)
+
+        print('START TEST')
         motor_serials=list(thorlabs_devices.devices.keys())
         motor_positions=[device.Position for device in list(thorlabs_devices.devices.values())]              
 
