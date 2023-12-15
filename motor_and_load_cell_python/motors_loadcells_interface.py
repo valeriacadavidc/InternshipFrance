@@ -1,4 +1,3 @@
-
 import os
 import time
 import clr
@@ -20,12 +19,7 @@ import sched
 import re
 from datetime import datetime
 import queue
-import matplotlib
-matplotlib.use("TkAgg")  # Set the backend explicitly
-
-# Import other necessary libraries
 import matplotlib.pyplot as plt
-
 import seaborn as sns
 import dask.dataframe as dd
 from openpyxl.drawing.image import Image
@@ -35,17 +29,12 @@ from matplotlib.ticker import MaxNLocator
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\ThorLabs.MotionControl.KCube.DCServoCLI.dll")
-#clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.Settings.dll")
-#clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.AdvancedMotor.dll")
-#clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.ControlParameters.dll")
 from Thorlabs.MotionControl.GenericMotorCLI.Settings import *
 from Thorlabs.MotionControl.GenericMotorCLI.AdvancedMotor import *
 from Thorlabs.MotionControl.GenericMotorCLI.ControlParameters import *
 from Thorlabs.MotionControl.DeviceManagerCLI import *
 from Thorlabs.MotionControl.GenericMotorCLI import *
 from Thorlabs.MotionControl.KCube.DCServoCLI import *
-
-
 
 clr.AddReference("C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\InternshipFrance\\Load_cell_python\\FUTEK_USB_DLL.dll")
 clr.AddReference("C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\InternshipFrance\\Load_cell_python\\FUTEK.Devices.dll")
@@ -127,131 +116,129 @@ class ThorlabsDevices:
             except Exception as e:
                 print(f"Failed to disconnect the device: {str(e)}")
 
-# Define a function to home a single device
-def homming(device):
-    try:    
-        time.sleep(0.25)
-        device.StartPolling(1)
-        time.sleep(0.25) 
-        device.Home(60000) 
-        device.SetBacklash(Decimal(0)) 
-    except Exception as error:
-        print(error)
+    def homming(device):
+        try:    
+            time.sleep(0.25)
+            device.StartPolling(1)
+            time.sleep(0.25) 
+            device.Home(60000) 
+            device.SetBacklash(Decimal(0)) 
+        except Exception as error:
+            print(error)
 
-def move_initial_position(device, initial_position):
-    """
-    Documentar
-    """
-    try:    
-        device.SetVelocityParams(Decimal(2), Decimal(1.5))
-        print(f'Moving to initial position {initial_position}')
-        device.MoveTo(Decimal(initial_position), 60000) 
-    except Exception as error:
-        print(error)
+    def move_initial_position(device, initial_position):
+        """
+        Documentar
+        """
+        try:    
+            device.SetVelocityParams(Decimal(2), Decimal(1.5))
+            print(f'Moving to initial position {initial_position}')
+            device.MoveTo(Decimal(initial_position), 60000) 
+        except Exception as error:
+            print(error)
 
-def set_velocity(device, velocity):
-    """
-    Documentar
-    """
-    try:    
-        device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
-        velocity_parameters = device.GetVelocityParams()
-        max_velocity = velocity_parameters.MaxVelocity
-        acceleration = velocity_parameters.Acceleration
-        print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
-    except Exception as error:
-        print(error)
+    def set_velocity(device, velocity):
+        """
+        Documentar
+        """
+        try:    
+            device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
+            velocity_parameters = device.GetVelocityParams()
+            max_velocity = velocity_parameters.MaxVelocity
+            acceleration = velocity_parameters.Acceleration
+            print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
+        except Exception as error:
+            print(error)
 
+    def home_device_and_set_velocity(device, initial_position, velocity,polling_rate):
+        """
+        Documentar
+        """
+        try:    
+            time.sleep(0.25)
+            device.StartPolling(polling_rate)
+            time.sleep(0.25) 
+            print(f'Polling rate of {polling_rate} ms for de device {device.DeviceID} established')
+            print(f"Homing device with serial number {device.DeviceID}")
+            device.Home(60000)  
+            device.SetVelocityParams(Decimal(2), Decimal(1.5))
+            print(f"Device with serial number {device.DeviceID} has completed homing.")
+            device.SetBacklash(Decimal(0))
+            print(f'Backlash 0 mm established')
+            print(f'Moving to initial position {initial_position}')
+            device.MoveTo(Decimal(initial_position), 60000) 
+            device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
+            velocity_parameters = device.GetVelocityParams()
+            max_velocity = velocity_parameters.MaxVelocity
+            acceleration = velocity_parameters.Acceleration
+            print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
+            
+        except Exception as error:
+            print(error)
 
+    def shif_device(device, final_position,waitTimeout):
+        """
+        Move a device to a specified final position.
 
-def home_device_and_set_velocity(device, initial_position, velocity,polling_rate):
-    """
-    Documentar
-    """
-    try:    
-        time.sleep(0.25)
-        device.StartPolling(polling_rate)
-        time.sleep(0.25) 
-        print(f'Polling rate of {polling_rate} ms for de device {device.DeviceID} established')
-        print(f"Homing device with serial number {device.DeviceID}")
-        device.Home(60000)  
-        device.SetVelocityParams(Decimal(2), Decimal(1.5))
-        print(f"Device with serial number {device.DeviceID} has completed homing.")
-        device.SetBacklash(Decimal(0))
-        print(f'Backlash 0 mm established')
-        print(f'Moving to initial position {initial_position}')
-        device.MoveTo(Decimal(initial_position), 60000) 
-        device.SetVelocityParams(Decimal(velocity), Decimal(4.5))
-        velocity_parameters = device.GetVelocityParams()
-        max_velocity = velocity_parameters.MaxVelocity
-        acceleration = velocity_parameters.Acceleration
-        print(f'\n{device.DeviceID}\nMaximum Velocity: {max_velocity}, Acceleration: {acceleration}')
-    except Exception as error:
-        print(error)
+        This function moves the specified 'device' to the given 'final_position'.
 
-def shif_device(device, final_position,waitTimeout):
-    """
-    Move a device to a specified final position.
+        Parameters:
+        - device: The device object to be moved.
+        - final_position (Decimal): The final position to which the device should be moved (Decimal).
 
-    This function moves the specified 'device' to the given 'final_position'.
+        Returns:
+        None
 
-    Parameters:
-    - device: The device object to be moved.
-    - final_position (Decimal): The final position to which the device should be moved (Decimal).
-
-    Returns:
-    None
-
-    Example:
-    To move 'my_device' to a final position of Decimal('20.0'):
-    >>> shift_device(my_device, Decimal('20.0'))
-    This will move 'my_device' to the position Decimal('20.0').
-    """
-    try:
-        device.MoveTo(Decimal(final_position),waitTimeout)
-    except Exception as e:
-        print(e)
-
-def hysteresis(device,initial_position, final_position, cycles,waitTimeout):
-    """
-    Perform a hysteresis test on a given device.
-
-    This function moves the device back and forth between the specified
-    initial_position and final_position for the specified number of cycles.
-
-    Parameters:
-    - device: The device object to be tested.
-    - initial_position (Decimal): The initial position where the hysteresis test starts.
-    - final_position (Decimal): The maximum shift to be achieved during each cycle.
-    - cycles (int): The number of cycles to perform.
-
-    Returns:
-    None
-
-    Example:
-    To perform a hysteresis test on a device:
-    >>> hysteresis(my_device, Decimal('0.0'), Decimal('10.0'), 5)
-    This will move 'my_device' back and forth between positions 10.0 and 0.0
-    for 5 cycles.
-    """
-    try:
-        for _ in range(cycles):
-            while (device.Status.IsMoving):
-                pass
+        Example:
+        To move 'my_device' to a final position of Decimal('20.0'):
+        >>> shift_device(my_device, Decimal('20.0'))
+        This will move 'my_device' to the position Decimal('20.0').
+        """
+        try:
             device.MoveTo(Decimal(final_position),waitTimeout)
-            while (device.Status.IsMoving):
-                pass
-            device.MoveTo(Decimal(initial_position),waitTimeout)
-    except Exception as e:
-        print(e)
+        except Exception as e:
+            print(e)
 
-def stress_relaxation(device,initial_position,forward_position, waiting_time, cycles,waitTimeout):
-    try:
-        for cycle in range(1,cycles+1,1):
-            device.MoveTo(Decimal(initial_position-forward_position*cycle),waitTimeout)
-            time.sleep(waiting_time)
-    except Exception as e:
-        print(e)
+    def hysteresis(device,initial_position, final_position, cycles,waitTimeout):
+        """
+        Perform a hysteresis test on a given device.
+
+        This function moves the device back and forth between the specified
+        initial_position and final_position for the specified number of cycles.
+
+        Parameters:
+        - device: The device object to be tested.
+        - initial_position (Decimal): The initial position where the hysteresis test starts.
+        - final_position (Decimal): The maximum shift to be achieved during each cycle.
+        - cycles (int): The number of cycles to perform.
+
+        Returns:
+        None
+
+        Example:
+        To perform a hysteresis test on a device:
+        >>> hysteresis(my_device, Decimal('0.0'), Decimal('10.0'), 5)
+        This will move 'my_device' back and forth between positions 10.0 and 0.0
+        for 5 cycles.
+        """
+        try:
+            for _ in range(cycles):
+                while (device.Status.IsMoving):
+                    pass
+                device.MoveTo(Decimal(final_position),waitTimeout)
+                while (device.Status.IsMoving):
+                    pass
+                device.MoveTo(Decimal(initial_position),waitTimeout)
+        except Exception as e:
+            print(e)
+
+    def stress_relaxation(device,initial_position,forward_position, waiting_time, cycles,waitTimeout):
+        try:
+            for cycle in range(1,cycles+1,1):
+                device.MoveTo(Decimal(initial_position-forward_position*cycle),waitTimeout)
+                time.sleep(waiting_time)
+        except Exception as e:
+            print(e)
 
 
 
@@ -274,7 +261,7 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
             sample_time = 1 / frequency
         final_position=25-final_position
         execution_time=(initial_position-final_position)/velocity
-        num_samples = int(((execution_time * 1.09) * frequency)*0.95)
+        num_samples = int(((execution_time * 1.09) * frequency)*0.9)
 
         waitTimeout=execution_time*1000+2000
         waitTimeout+=waitTimeout*0.8
@@ -291,7 +278,7 @@ def set_parameters(case,velocity,initial_position,final_position=None,polling_ra
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
         waitTimeout+=waitTimeout*0.8
         waitTimeout=System.Convert.ToUInt64(waitTimeout)#Duration to wait for command to execute
-        num_samples = int(((execution_time * 1.09+10) * frequency))
+        num_samples = int(((execution_time * 1.09) * frequency)*0.8)
       
         return velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout
     if case==3:
@@ -780,198 +767,3 @@ def collect_data(queue_obj,motor_devices_dictionary,load_cells_list, sample_time
     except Exception as e:
         # Handle the exception here, you can print an error message or log it
         print(f"An exception occurred: {str(e)}")
-
-def main():
-    """The main entry point for the application"""
-    try:
-   
-
-        # DeviceManagerCLI.BuildDeviceList()
-        # available_devices = DeviceManagerCLI.GetDeviceList()  # List of available devices
-        # Create an instance of ThorlabsDevices
-        thorlabs_devices = ThorlabsDevices()
-        available_devices=thorlabs_devices.detect_devices()
-        # Iterate through the list of serial numbers and assign devices
-        for serial_number in available_devices:
-            thorlabs_devices.connect_device(serial_number)
-        
-             #force_units,conversion_factor=force_units_and_conversion_factor()
-        #Conexion celdas de carga
-        repository_FUTEK = FUTEK.Devices.DeviceRepository()
-        devices_FUTEK = list(repository_FUTEK.DetectDevices())
-
-  
-        #CASO 1: shift
-  
-        # parameters=[1,0,20,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
-        # path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
-        # #for i in range(20): if I want to run
-        # velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
-        # # Do the homing and set the velocity
-        # # Perform homing and place the device in the initial position
-        # # Initialize tasks in parallel for all the devices
-        # i=1
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     # Execute home_device in parallel for all devices
-         
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
-        #         # Wait for all of the tasks to complete
-        #     concurrent.futures.wait(futures)
-        # name=f"Shift_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_exp_{i}_all"
-        # print('PREPARE TEST')
-        # time.sleep(30)
-        # queue_data_collected = queue.Queue()
-        # print('START TEST')
-        # motor_serials=list(thorlabs_devices.devices.keys())
-        # motor_positions=[device.Position for device in list(thorlabs_devices.devices.values())]              
-        # loadcells_serials=[loadcell.GetInstrumentSerialNumber() for loadcell in devices_FUTEK] 
-        # loadcells_forces= [loadcell.GetChannelXReading(0) for loadcell in devices_FUTEK]
-        # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        #     p1=executor.submit(collect_data,queue_data_collected,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
-        #     # Start the tasks in futures
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
-        #     # Wait for all of the tasks to complete
-        #     concurrent.futures.wait([p1] + futures)
-        # initial_date_hour = queue_data_collected.get()
-
-        # data=collected_data_modification(path,name,initial_date_hour=initial_date_hour,desired_uni_force='N',serial_numbers_initial_positions=motor_serials,initial_positions=motor_positions,
-        #                                  serial_numbers_initial_forces=loadcells_serials,initial_forces=loadcells_forces)
-
-        
-        # positions_graph=plot_graph_positions(data,path=path,name=name, language='english')
-        # forces_graph=plot_graph_forces(data, path=path,name=name, language='english')
-        # positions_graph_s=plot_graph_positions(data,path=path,name=name, language='spanish')
-        # forces_graph_s=plot_graph_forces(data, path=path,name=name, language='spanish')
-        # print(f'Fin ciclo {i}')
-        # print('valelinda3')
-        # print(f'Fin ciclo shif device {i}')
-        # print('valelinda')
-
-        #CASO 2 histeresis
-
-        parameters=[2,0,10,1,60,5] #velocity,initial position,final position, polling rate, frecuency, ciclos
-    
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
-        #for i in range(20): if I want to run
-        velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=2,velocity=parameters[0],
-        initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=parameters[5],forward_position=None,
-        waiting_time=None)
-        # Do the homing and set the velocity
-        # Perform homing and place the device in the initial position
-        # Initialize tasks in parallel for all the devices
-        i=1
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Execute home_device in parallel for all devices
-            for device in thorlabs_devices.devices.values():
-                executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
-        name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_data"
-        print('PREPARE TEST')
-        time.sleep(30)
-        queue_data_collected = queue.Queue()
-        print('START TEST')
-        motor_serials=list(thorlabs_devices.devices.keys())
-        motor_positions=[device.Position for device in list(thorlabs_devices.devices.values())]              
-        loadcells_serials=[loadcell.GetInstrumentSerialNumber() for loadcell in devices_FUTEK] 
-        loadcells_forces= [loadcell.GetChannelXReading(0) for loadcell in devices_FUTEK]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,queue_data_collected,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
-            # Start the tasks in futures
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(hysteresis,device,initial_position, final_position, cycles,waitTimeout))
-            # Wait for all of the tasks to complete
-            concurrent.futures.wait([p1] + futures)
-
-         # Obtener el resultado de la cola
-        initial_date_hour = queue_data_collected.get()
-
-        data=collected_data_modification(path,name,initial_date_hour=initial_date_hour,desired_uni_force='N',serial_numbers_initial_positions=motor_serials,initial_positions=motor_positions,
-                                         serial_numbers_initial_forces=loadcells_serials,initial_forces=loadcells_forces)
-
-        
-        positions_graph=plot_graph_positions(data,path=path,name=name, language='english')
-        forces_graph=plot_graph_forces(data, path=path,name=name, language='english')
-        positions_graph_s=plot_graph_positions(data,path=path,name=name, language='spanish')
-        forces_graph_s=plot_graph_forces(data, path=path,name=name, language='spanish')
-        print(f'Fin ciclo {i}')
-        print('valelinda3')
-
-        #CASO 3 stress relaxation
-
-        # parameters=[2,0,1,100,5,5,5] #velocity mm/s,initial position mm, polling rate ms y entero, frecuency Hz,cycles,foward position mm,waiting_time
-        # path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
-        # #for i in range(20): if I want to run
-        # velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=3,velocity=parameters[0],
-        # initial_position=parameters[1],final_position=None,polling_rate=parameters[2],frequency=parameters[3],cycles=parameters[4],forward_position=parameters[5],
-        # waiting_time=parameters[6])
-        # print("velocity:", velocity)
-        # print("initial position:", initial_position)
-        # print("forward_position:", forward_position)
-        # print("waiting_time:", waiting_time)
-        # print("cycles:", cycles)
-        # print("polling_rate:", polling_rate)
-        # print("sample_time:", sample_time)
-        # print("num_samples:", num_samples)
-        # print("waitTimeout:", waitTimeout)
-        # # Do the homing and set the velocity
-        # # Perform homing and place the device in the initial position
-        # # Initialize tasks in parallel for all the devices
-        # i=1
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     # Execute home_device in parallel for all devices
-         
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
-        #         # Wait for all of the tasks to complete
-        #     concurrent.futures.wait(futures)
-        # name=f"stress_relaxation_vel_{parameters[0]}_pi_{parameters[1]}_pollrate_{parameters[2]}_samplefreq_{parameters[3]}_cycles_{cycles}_fp_{parameters[5]}_waittime_{parameters[6]}_exp_{i}_all"
-        # print('PREPARE TEST')
-        # time.sleep(30)
-        # queue_data_collected = queue.Queue()
-        # print('START TEST')
-        # motor_serials=list(thorlabs_devices.devices.keys())
-        # motor_positions=[device.Position for device in list(thorlabs_devices.devices.values())]              
-        # loadcells_serials=[loadcell.GetInstrumentSerialNumber() for loadcell in devices_FUTEK] 
-        # loadcells_forces= [loadcell.GetChannelXReading(0) for loadcell in devices_FUTEK]
-        # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        #     p1=executor.submit(collect_data,queue_data_collected,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
-        #     # Start the tasks in futures
-        #     futures = []
-        #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(stress_relaxation,device,initial_position,forward_position, waiting_time, cycles,waitTimeout))
-        #     # Wait for all of the tasks to complete
-        #     concurrent.futures.wait([p1] + futures)
-
-        #    # Obtener el resultado de la cola
-        # initial_date_hour = queue_data_collected.get()
-
-        # data=collected_data_modification(path,name,initial_date_hour=initial_date_hour,desired_uni_force='N',serial_numbers_initial_positions=motor_serials,initial_positions=motor_positions,
-        #                                  serial_numbers_initial_forces=loadcells_serials,initial_forces=loadcells_forces)
-
-        
-        # positions_graph=plot_graph_positions(data,path=path,name=name, language='english')
-        # forces_graph=plot_graph_forces(data, path=path,name=name, language='english')
-        # positions_graph_s=plot_graph_positions(data,path=path,name=name, language='spanish')
-        # forces_graph_s=plot_graph_forces(data, path=path,name=name, language='spanish')
-        # print(f'Fin ciclo shif device {i}')
-        # print('valelinda')
-
-
-        for loadcell in devices_FUTEK:
-            repository_FUTEK.DisconnectDevice( loadcell.GetModelNumber(),loadcell.GetInstrumentSerialNumber())
-            print(f"Load cell disconnected: {loadcell.GetInstrumentSerialNumber()}")
-
-        for device in list(thorlabs_devices.devices.values()):
-            thorlabs_devices.disconnect_device(device.DeviceID)
-
-    except Exception as e:
-        print(e)
-
-if __name__ == "__main__":
-    #cProfile.run("main()", sort='cumulative')
-    main()
