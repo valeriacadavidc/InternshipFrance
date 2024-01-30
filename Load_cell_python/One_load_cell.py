@@ -49,22 +49,23 @@ print(f"Promedio reading: {np.mean(readings)} segundos")
 #Intento streaming
 t=[]
 readings2=[]
+devices[0].PreStreamingOperations()
 for _ in range(1000):
     t1=time.perf_counter()
-    devices[0].PreStreamingOperations()
+    #devices[0].PreStreamingOperations()
     points = devices[0].GetStreamingDataConverted()
     if points:
         a=min([p.ConvertedValue for p in points])
     else:
         a=None
-    devices[0].PostStreamingOperations()
+    #devices[0].PostStreamingOperations()
     t2 = time.perf_counter() - t1
     t.append(t2)
     if a is not None:
         readings2.append(float(a))
     else:
         readings2.append(None)
-
+devices[0].PostStreamingOperations()
 promedio1 = np.mean(t)
 desviacion_estandar1 = np.std(t)
 print('GetStreamingDataConverted()')
@@ -91,16 +92,16 @@ print('valelinda')
 
 #print('ADC',devices[0].GetChannelXNormalDataRequest(0))
 #devices[0].SetChannelXUnitOfMeasure(0,FUTEK.Devices.UnitsOfMeasure(18))
-sampling_rate_initial=devices[0].GetChannelXSamplingRate(0)
-list_sampling_rates=list(devices[0].GetChannelXSamplingRatePossibleValues(0))
-#devices[0].SetChannelXSamplingRate(0,list_sampling_rates[11]) #Change the sample rate
-sampling_rate_new=devices[0].GetChannelXSamplingRate(0)
-#print('ADC',devices[0].GetChannelXNormalDataRequest(0))
-print('Initial sampling rate',sampling_rate_initial)
-print('Sampling rates available',list_sampling_rates)
-print('New sampling rate',sampling_rate_new)
+# sampling_rate_initial=devices[0].GetChannelXSamplingRate(0)
+# list_sampling_rates=list(devices[0].GetChannelXSamplingRatePossibleValues(0))
+# #devices[0].SetChannelXSamplingRate(0,list_sampling_rates[11]) #Change the sample rate
+# sampling_rate_new=devices[0].GetChannelXSamplingRate(0)
+# #print('ADC',devices[0].GetChannelXNormalDataRequest(0))
+# print('Initial sampling rate',sampling_rate_initial)
+# print('Sampling rates available',list_sampling_rates)
+# print('New sampling rate',sampling_rate_new)
 
-repo.DisconnectDevice( modelNumber,serialNumber)
+# repo.DisconnectDevice( modelNumber,serialNumber)
 
 def collect_data(devices_dictionary, sample_time, num_samples, path, name):
     #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses sched

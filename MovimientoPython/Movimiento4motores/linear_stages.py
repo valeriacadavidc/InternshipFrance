@@ -15,13 +15,8 @@ import timeit
 import numpy as np
 import csv
 import sched
-import multiprocessing
 
-clr.AddReference("C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\InternshipFrance\\Load_cell_python\\FUTEK_USB_DLL.dll")
-clr.AddReference("C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\InternshipFrance\\Load_cell_python\\FUTEK.Devices.dll")
-clr.AddReference("C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\InternshipFrance\\Load_cell_python\\FTD2XX_NET.dll")
-import FUTEK_USB_DLL
-import FUTEK.Devices
+
 
 clr.AddReference("C:\\Program Files\\Thorlabs\\Kinesis\\Thorlabs.MotionControl.DeviceManagerCLI.dll")
 clr.AddReference("C:\\Program Files\\Thorlabs\Kinesis\\Thorlabs.MotionControl.GenericMotorCLI.dll")
@@ -85,7 +80,7 @@ class ThorlabsDevices:
                 print(f"Device name: {device_name}")
                 print(device_info.Description)
 
-                print(f"Connected to the linear stage with serial number {serial_number}\n")
+                print(f"Connected to the device with serial number {serial_number}\n")
             except Exception as e:
                 print(f"Failed to connect the device: {str(e)}")
 
@@ -103,11 +98,12 @@ class ThorlabsDevices:
             try:
                 self.devices[serial_number].Disconnect(True)
                 del self.devices[serial_number]
-                print(f"Linear stage disconnected: {serial_number}")
+                print(f"Device disconnected: {serial_number}")
             except Exception as e:
                 print(f"Failed to disconnect the device: {str(e)}")
 
 # Define a function to home a single device
+
 
 def home_device_and_set_velocity(device, initial_position, velocity,polling_rate):
     """
@@ -190,17 +186,26 @@ def hysteresis(device,initial_position, final_position, cycles,waitTimeout):
     except Exception as e:
         print(e)
 
+def stress_relaxation(device,initial_position,forward_position, waiting_time, cycles,waitTimeout):
+    try:
+        for cycle in range(1,cycles+1,1):
+            device.MoveTo(Decimal(initial_position-forward_position*cycle),waitTimeout)
+            time.sleep(waiting_time)
+    except Exception as e:
+        print(e)
 
 
-def set_parameters(case,velocity,initial_position,final_position,polling_rate,frequency,cycles=None,forward_position=None, waiting_time=None):
+
+def set_parameters(case,velocity,initial_position,final_position=None,polling_rate=1,frequency=100,cycles=None,forward_position=None, waiting_time=None):
     '''
     DOCUMENTACntar 
     
     '''
  
     initial_position=initial_position+25 #Initial position must be
-    final_position=25-final_position
     if case==1:
+        
+        final_position=25-final_position
         execution_time=(initial_position-final_position)/velocity
         num_samples = int((execution_time * 1.1 + 16) * frequency)
         print(num_samples)
@@ -210,6 +215,8 @@ def set_parameters(case,velocity,initial_position,final_position,polling_rate,fr
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
         return velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout
     if case==2:
+        
+        final_position=25-final_position
         execution_time= (initial_position-final_position)*2*cycles/velocity
         waitTimeout=(initial_position-final_position)*1000/velocity+2000
         waitTimeout+=waitTimeout*0.7
@@ -218,28 +225,27 @@ def set_parameters(case,velocity,initial_position,final_position,polling_rate,fr
         sample_time = 1 / frequency
         return velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout
     if case==3:
-        if forward_position*cycles>20:
-            cycles-=1
+        while (True):
+            if forward_position*cycles>20:
+                cycles-=1
+            if forward_position*cycles<=20:
+                break
+            
         execution_time=(forward_position/velocity+waiting_time)*cycles
-        print(execution_time)
         waitTimeout=forward_position/velocity*1000
         waitTimeout+=waitTimeout*0.7
         waitTimeout=System.Convert.ToUInt64(waitTimeout)
-        return velocity,forward_position, waiting_time,cycles,polling_rate,waitTimeout
-    
-def get_position(device):
-    return device.Position
+        sample_time = 1 / frequency
+        num_samples = int((execution_time * 1.1 + 16) * frequency)
+        return velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout
 
-def get_loadcell_reading(loadcell):
-    return loadcell.GetChannelXReading(0)
-
-def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samples, path, name):
+def collect_data(devices_dictionary, sample_time, num_samples, path, name):
     #Save the data directly in a csv later ir read the csv and save it in a beter way to understand the results, and uses sched
     try:
         # Get the list of devices from the dictionary
-        devices_list = list(motor_devices_dictionary.values())
+        devices_list = list(devices_dictionary.values())
         sample = 0
-        columnas = ['seconds'] + ['real_position_' + elemento +'_mm' for elemento in motor_devices_dictionary.keys()]+['load_cell_'+loadcell.GetInstrumentSerialNumber()+ '_'+ str(loadcell.GetChannelXUnitOfMeasure(0)) for loadcell in load_cells_list]
+        columnas = ['seconds'] + ['real_position_' + elemento for elemento in devices_dictionary.keys()]
         # Create a CSV file to save the data
         csv_file_path = f'{path}\\{name}.csv'
         with open(csv_file_path, mode='w', newline='') as csv_file:
@@ -248,21 +254,21 @@ def collect_data(motor_devices_dictionary,load_cells_list, sample_time, num_samp
             def write_timestamp(sc):
                 """This function writes a timestamp and device positions to the CSV file."""
                 #initial_time=time.perf_counter()
-                nonlocal sample, initial_time
-                # Combine the results into a single array at the same time     
-                data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]+[loadcell.GetChannelXReading(0) for loadcell in load_cells_list]
-                #data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]+list(map(lambda loadcell: loadcell.GetChannelXReading(0), load_cells_list))
-                #data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]
-                
+                nonlocal sample, initial_time,t1,t2
+                data_line = [time.perf_counter()-initial_time] + [device.Position for device in devices_list]
                 sample += 1
                 csv_writer.writerow(data_line)
                 if sample < num_samples:
-                    sc.enter(sample_time, 1, write_timestamp, (sc,))
+                    t1=time.perf_counter()
+                    sc.enter((data_line[0]+sample_time-time.perf_counter()+initial_time-t2)*0.9, 1, write_timestamp, (sc,))
+                    t2=time.perf_counter()-t1
             # Create a scheduler object
             s = sched.scheduler(time.perf_counter, time.sleep)
             # Schedule the function `write_timestamp()` to run immediately and then repeatedly every sample_time seconds
             initial_time = time.perf_counter()
+            t1=time.perf_counter()
             s.enter(0, 1, write_timestamp, (s,))
+            t2=time.perf_counter()-t1
             s.run()
     
     except Exception as e:
@@ -273,9 +279,6 @@ def main():
     """The main entry point for the application"""
     try:
         
-        #Conexion celdas de carga
-        repository_FUTEK = FUTEK.Devices.DeviceRepository()
-        devices_FUTEK = list(repository_FUTEK.DetectDevices())
 
         DeviceManagerCLI.BuildDeviceList()
         available_devices = DeviceManagerCLI.GetDeviceList()  # List of available devices
@@ -286,66 +289,120 @@ def main():
             thorlabs_devices.connect_device(serial_number)
         #Caso 1 shift device
         #codigo para hacer repetibilidad iniciando bajo las mismas condiciones (reiniciando computador y apagando equipos) con la funcion que usa un scheduler para tomar los datos
-        
-        parameters9=[2,0,20,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
-        parameters=parameters9 #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
-        #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\celdadecargaymotor"
-        #for i in range(20): if I want to run
-        velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
-        # Do the homing and set the velocity
-        # Perform homing and place the device in the initial position
-        # Initialize tasks in parallel for all the devices
-        i=0
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Execute home_device in parallel for all devices
-            for device in thorlabs_devices.devices.values():
-                executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
-        name=f"Shift_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_exp_{i}_all_backlash_4motores"
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            p1=executor.submit(collect_data,thorlabs_devices.devices,devices_FUTEK,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
-            # Start the tasks in futures
-            futures = []
-            for device in thorlabs_devices.devices.values():
-                futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
-            # Wait for all of the tasks to complete
-            concurrent.futures.wait([p1] + futures)
-        print(f'Fin ciclo shif device {i}')
-        print('valelinda')
-        #Caso 2 histeresis
-
-        # parameters=[0.1,0,5,300,150,3] #velocity,initial position,final position, polling rate, frecuency, ciclos
-    
+        # parameters1=[0.01,0,0.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters2=[0.01,0,6.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters3=[0.01,0,12.5,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters4=[0.25,0,0.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters5=[0.25,0,6.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters6=[0.25,0,12.5,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters7=[0.5,0,0.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters8=[0.5,0,6.25,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters9=[0.5,0,12.5,1,100] #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
+        # parameters=parameters2 #velocity mm/s,initial position mm,final position mm, polling rate ms y entero, frecuency Hz
         # #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
-        # path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Intentos_precarga"
+        # path="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Taguchi3_dos_motores_2factores\\2"
         # #for i in range(20): if I want to run
-        # velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=2,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=parameters[5],forward_position=None, waiting_time=None)
+        # velocity,initial_position,final_position,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=1,velocity=parameters[0],initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=None,forward_position=None, waiting_time=None)
         # # Do the homing and set the velocity
         # # Perform homing and place the device in the initial position
         # # Initialize tasks in parallel for all the devices
-        # i=1
+        # i=5
         # with concurrent.futures.ThreadPoolExecutor() as executor:
         #     # Execute home_device in parallel for all devices
+         
+        #     futures = []
         #     for device in thorlabs_devices.devices.values():
-        #         executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
-        # name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_"
+        #         futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
+        #         # Wait for all of the tasks to complete
+        #     concurrent.futures.wait(futures)
+        # name=f"Shift_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_exp_{i}_all"
+
         # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         #     p1=executor.submit(collect_data,thorlabs_devices.devices,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
         #     # Start the tasks in futures
         #     futures = []
         #     for device in thorlabs_devices.devices.values():
-        #         futures.append(executor.submit(hysteresis,device,initial_position, final_position, cycles,waitTimeout))
+        #         futures.append(executor.submit(shif_device, device, final_position,waitTimeout))
         #     # Wait for all of the tasks to complete
         #     concurrent.futures.wait([p1] + futures)
-        # print(f'Fin ciclo {i}')
-        # print('valelinda3')
+        # print(f'Fin ciclo shif device {i}')
+        # print('valelinda')
+        #Caso 2 histeresis
 
-        for loadcell in devices_FUTEK:
-            repository_FUTEK.DisconnectDevice( loadcell.GetModelNumber(),loadcell.GetInstrumentSerialNumber())
-            print(f"Load cell disconnected: {loadcell.GetInstrumentSerialNumber()}")
+        parameters=[1,0,2,1,100,1] #velocity,initial position,final position, polling rate, frecuency, ciclos
+    
+        #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
+        path=r"C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\Intentos_precarga"
+        #for i in range(20): if I want to run
+        velocity,initial_position,final_position,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=2,velocity=parameters[0],
+        initial_position=parameters[1],final_position=parameters[2],polling_rate=parameters[3],frequency=parameters[4],cycles=parameters[5],forward_position=None,
+        waiting_time=None)
+        # Do the homing and set the velocity
+        # Perform homing and place the device in the initial position
+        # Initialize tasks in parallel for all the devices
+        i=1
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Execute home_device in parallel for all devices
+            for device in thorlabs_devices.devices.values():
+                executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate)
+        name=f"histeresis_vel_{parameters[0]}_pi_{parameters[1]}_pf_{parameters[2]}_pollrate_{parameters[3]}_samplefreq_{parameters[4]}_ciclos_{parameters[5]}_exp_{i}_all"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            p1=executor.submit(collect_data,thorlabs_devices.devices,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
+            # Start the tasks in futures
+            futures = []
+            for device in thorlabs_devices.devices.values():
+                futures.append(executor.submit(hysteresis,device,initial_position, final_position, cycles,waitTimeout))
+            # Wait for all of the tasks to complete
+            concurrent.futures.wait([p1] + futures)
+        print(f'Fin ciclo {i}')
+        print('valelinda3')
 
-        for device in list(thorlabs_devices.devices.values()):
-            thorlabs_devices.disconnect_device(device.DeviceID)
+        #Caso 3 stress relaxation
+
+    #     parameters=[0.5,0,1,100,2,3,5] #velocity mm/s,initial position mm, polling rate ms y entero, frecuency Hz,cycles,foward position mm,waiting_time
+    #     #path=r"C:\Users\valeria.cadavid\Documents\RepositorioCodigos\Resultados\Movimiento\Prueba_1motor_20veces_0-6.25mmo25-18.75mm_1mms_motor_27259541_iguales_condiciones"
+    #     path="C:\\Users\\valeria.cadavid\\Documents\\RepositorioCodigos\\Resultados\\Movimiento\\intentos_stress_relaxation"
+    #     #for i in range(20): if I want to run
+    #     velocity,initial_position,forward_position,waiting_time,cycles,polling_rate,sample_time,num_samples,waitTimeout=set_parameters(case=3,velocity=parameters[0],
+    #     initial_position=parameters[1],final_position=None,polling_rate=parameters[2],frequency=parameters[3],cycles=parameters[4],forward_position=parameters[5],
+    #     waiting_time=parameters[6])
+    #     print("velocity:", velocity)
+    #     print("initial position:", initial_position)
+    #     print("forward_position:", forward_position)
+    #     print("waiting_time:", waiting_time)
+    #     print("cycles:", cycles)
+    #     print("polling_rate:", polling_rate)
+    #     print("sample_time:", sample_time)
+    #     print("num_samples:", num_samples)
+    #     print("waitTimeout:", waitTimeout)
+    #     # Do the homing and set the velocity
+    #     # Perform homing and place the device in the initial position
+    #     # Initialize tasks in parallel for all the devices
+    #     i=1
+    #     with concurrent.futures.ThreadPoolExecutor() as executor:
+    #         # Execute home_device in parallel for all devices
+         
+    #         futures = []
+    #         for device in thorlabs_devices.devices.values():
+    #             futures.append(executor.submit(home_device_and_set_velocity, device, initial_position, velocity,polling_rate))
+    #             # Wait for all of the tasks to complete
+    #         concurrent.futures.wait(futures)
+    #     name=f"stress_relaxation_vel_{parameters[0]}_pi_{parameters[1]}_pollrate_{parameters[2]}_samplefreq_{parameters[3]}_cycles_{cycles}_fp_{parameters[5]}_waittime_{parameters[6]}_exp_{i}_all"
+
+    #     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    #         p1=executor.submit(collect_data,thorlabs_devices.devices,sample_time=sample_time, num_samples=num_samples, path=path, name=name)
+    #         # Start the tasks in futures
+    #         futures = []
+    #         for device in thorlabs_devices.devices.values():
+    #             futures.append(executor.submit(stress_relaxation,device,initial_position,forward_position, waiting_time, cycles,waitTimeout))
+    #         # Wait for all of the tasks to complete
+    #         concurrent.futures.wait([p1] + futures)
+    #     print(f'Fin ciclo shif device {i}')
+    #     print('valelinda')
+
+
+    #     for device in list(thorlabs_devices.devices.values()):
+    #         thorlabs_devices.disconnect_device(device.DeviceID)
 
     except Exception as e:
         print(e)
